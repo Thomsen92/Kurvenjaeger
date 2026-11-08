@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<link rel="stylesheet" href="/src/style.css">
+<title>Kurvenjäger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Russo+One&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+
+
+<div id="app">
+  <canvas id="c"></canvas>
+  <canvas id="o"></canvas>
+  <div id="flash"></div>
+  <div id="hud" hidden>
+    <div>
+      <div class="pos"><b id="posTxt">4</b><span>/ 4</span></div>
+      <div class="lap" id="lapTxt">Runde 1 / 3</div>
+    </div>
+    <div class="clock"><small>Zeit</small><b id="timeTxt">0:00.00</b></div>
+  </div>
+  <div id="wrong" hidden>Falsche Richtung!</div>
+  <div id="speed" hidden><b id="spdTxt">0</b><small>km/h</small></div>
+  <div id="banner"><b></b><span></span></div>
+  <div id="ctl" hidden>
+    <div>
+      <button class="pad steer" id="bL" type="button" aria-label="Nach links lenken"><svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8"/></svg></button>
+      <button class="pad steer" id="bR" type="button" aria-label="Nach rechts lenken"><svg viewBox="0 0 24 24"><path d="m9 4 8 8-8 8"/></svg></button>
+    </div>
+    <div>
+      <button class="pad drift" id="bDrift" type="button" aria-label="Driften und bremsen">DRIFT</button>
+      <button class="pad" id="bItem" type="button" aria-label="Item benutzen"><span>ITEM</span></button>
+    </div>
+  </div>
+
+  <button id="mute" class="mute" type="button" aria-pressed="true">Ton an</button>
+  <div id="menu" class="overlay">
+    <div class="menuIn">
+      <p class="kicker">Himmels-Rennen</p>
+      <h1>Kurven<em>jäger</em></h1>
+      <div class="stage" aria-hidden="true"></div>
+      <div class="sheet">
+        <p class="lead">Drei Runden in einem Themenpark im Himmel. Weiche Kühen, Pfützen und Enten aus, sammle Item-Würfel und spring mit dem Fallschirm über die Abgründe.</p>
+        <h2 class="sec">Charakter</h2>
+        <div id="chars"></div>
+        <p class="charInfo" id="charInfo"></p>
+        <div id="skins" class="skrow"></div>
+        <h2 class="sec">Kart</h2>
+        <div id="cars"></div>
+        <div id="paints" class="skrow"></div>
+        <h2 class="sec">Strecke</h2>
+        <div id="tracks"></div>
+        <h2 class="sec">Mehrspieler</h2>
+        <div id="mp">
+          <div id="mpJoinRow">
+            <input id="mpName" class="txt" maxlength="12" placeholder="Dein Name" aria-label="Dein Name">
+            <div class="row"><input id="mpCode" class="txt" maxlength="6" placeholder="Raum-Code" aria-label="Raum-Code" autocapitalize="characters" autocomplete="off"><button id="mpJoin" class="ghost">Beitreten</button><button id="mpNew" class="ghost">Neuer Raum</button></div>
+          </div>
+          <p class="hint" id="mpStatus"></p>
+          <div id="mpRoom" hidden>
+            <p class="hint">Raum-Code: <b id="mpCodeShow" class="code"></b> Schick den Code an Freunde. Sie öffnen dasselbe Spiel und treten mit dem Code bei (bis zu 8 Fahrer).</p>
+            <ul id="mpList"></ul>
+            <div class="row"><button id="mpGo" class="cta" hidden>Gemeinsam starten</button><button id="mpLeave" class="ghost">Raum verlassen</button></div>
+            <p class="hint" id="mpHint"></p>
+          </div>
+        </div>
+        <button id="startBtn" class="cta">Rennen starten</button>
+        <p class="hint"><b>Pfeile:</b> lenken, das Kart gibt von allein Gas. <b>Item:</b> tippen zum Benutzen. <b>Drift:</b> in der Kurve halten und loslassen für einen Boost. Fahr auf den Rampen mit viel Tempo, sonst stürzt du in den Abgrund. Nach dem Absprung öffnet sich ein Fallschirm: Leichte Figuren und Karts schweben weiter, schwere sinken schneller. Am Computer: Pfeiltasten, Leertaste für das Item, Shift zum Driften.</p>
+        <p class="best" id="bestLine"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="over" class="overlay dim" hidden>
+    <div class="menuIn">
+      <p class="kicker">Zieleinlauf</p>
+      <h1 id="overTitle">Platz 1</h1>
+      <p class="newbest" id="newBest" hidden>Neue Bestzeit!</p>
+      <ol id="results"></ol>
+      <div class="res">
+        <div><small>Deine Zeit</small><b id="rTime">0:00.00</b></div>
+        <div><small>Beste Runde</small><b id="rLap">0:00.00</b></div>
+      </div>
+      <div class="row">
+        <button id="againBtn" class="cta">Nochmal</button>
+        <button id="changeBtn" class="ghost">Zum Menü</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+
+</body></html>

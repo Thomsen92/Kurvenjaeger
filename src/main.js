@@ -1,0 +1,18 @@
+import * as THREE from 'three';
+window.THREE = THREE;
+import './util.js';
+import './core.js';
+import './world.js';
+import './karts.js';
+import './deco.js';
+import './cars.js';
+import './items.js';
+import './ai.js';
+import './physics.js';
+import './multiplayer.js';
+import './input.js';
+import './flow.js';
+import './draw.js';
+import './hud.js';
+import './menu.js';
+import './boot.js';
