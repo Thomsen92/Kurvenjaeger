@@ -105,7 +105,7 @@ export function mpRemote(c, dt) {
   const fl = r.fl | 0;
   c.s = r.s || 0; c.steer = r.st || 0; if (typeof r.p === 'number') c.prog = r.p; c.lap = Math.max(0, Math.floor(c.prog / N));
   c.air = !!(fl & 1); c.chute = !!(fl & 2); c.feather = !!(fl & 4); c.boost = fl & 8 ? 1 : 0; c.fall = !!(fl & 16); c.shield = fl & 32 ? 9 : 0; c.freeze = fl & 64 ? 1 : 0; c.spin = fl & 128 ? 1 : 0;
-  c.onPlat = !c.fall; c.inv = 0; c.spinAng = c.spin > 0 ? c.spinAng + dt * 11 : 0;
+  c.onPlat = !c.fall && !(fl & 256); c.pitch = r.pt || 0; c.inv = 0; c.spinAng = c.spin > 0 ? c.spinAng + dt * 11 : 0;
   c.finished = (r.f || 0) > 0; c.finishT = r.f || 0;
   c.vx = Math.cos(c.a) * c.s; c.vz = Math.sin(c.a) * c.s;
 }
@@ -113,8 +113,8 @@ export function mpSend(dt) {
   if (!mp.active || !mp.nr || !S.player) return;
   mp.acc += dt; if (mp.acc < 0.066) return; mp.acc = 0;
   const p = S.player, f1 = v => Math.round(v * 10) / 10;
-  const fl = (p.air ? 1 : 0) | (p.chute ? 2 : 0) | (p.feather ? 4 : 0) | (p.boost > 0 ? 8 : 0) | (p.fall ? 16 : 0) | (p.shield > 0 ? 32 : 0) | (p.freeze > 0 ? 64 : 0) | (p.spin > 0 ? 128 : 0);
-  mp.nr.presence({ x: f1(p.x), z: f1(p.z), a: Math.round(p.a * 100) / 100, y: f1(p.y), s: Math.round(p.s), st: Math.round(p.steer * 100) / 100, p: f1(p.prog), f: p.finished ? Math.round(p.finishT * 100) / 100 : 0, fl }).catch(() => {});
+  const fl = (p.air ? 1 : 0) | (p.chute ? 2 : 0) | (p.feather ? 4 : 0) | (p.boost > 0 ? 8 : 0) | (p.fall ? 16 : 0) | (p.shield > 0 ? 32 : 0) | (p.freeze > 0 ? 64 : 0) | (p.spin > 0 ? 128 : 0) | (p.loop ? 256 : 0);
+  mp.nr.presence({ x: f1(p.x), z: f1(p.z), a: Math.round(p.a * 100) / 100, y: f1(p.y), s: Math.round(p.s), st: Math.round(p.steer * 100) / 100, pt: Math.round(p.pitch * 100) / 100, p: f1(p.prog), f: p.finished ? Math.round(p.finishT * 100) / 100 : 0, fl }).catch(() => {});
 }
 /* Menü-Verdrahtung */
 (function () {

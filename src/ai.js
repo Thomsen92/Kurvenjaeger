@@ -22,7 +22,8 @@ export function aiItem(c, dt) {
 export function aiControl(c, dt) {
   const pts = S.world.pts, look = 9 + Math.floor(Math.abs(c.s) / 18), tp = pts[(c.idx + look) % N];
   const nearGap = S.world.near[c.idx];
-  if (nearGap) c.lane += (0 - c.lane) * Math.min(1, dt * 3);
+  const L = S.world.loop, inLoop = L && wrapIdx(c.idx - L.i0) > -44 && wrapIdx(c.idx - L.i0) < L.m + 6;
+  if (nearGap) c.lane += ((inLoop ? L.lc : 0) - c.lane) * Math.min(1, dt * 3);
   else { c.laneT -= dt; if (c.laneT <= 0) { c.lane = rand(-34, 34); c.laneT = rand(2, 5); } }
   const tx = tp.x + tp.nx * c.lane, tz = tp.z + tp.nz * c.lane;
   const want = Math.atan2(tz - c.z, tx - c.x);

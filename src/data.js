@@ -6,32 +6,29 @@ const KARTS = [
   { id: 'wiesel', name: 'Wiesel', role: 'Wendig', color: 0x4fd8ff, css: '#4fd8ff', max: 140, acc: 74, turn: 2.35, grip: 6.5, mass: 0.8 }
 ];
 const CHARS = [
+  { id: 'tom', name: 'Tom', kind: 'Tomate', note: 'Saftig, ausgewogen und fix.', torso: 0xc92a3a, mods: { max: 1, acc: 1, turn: 1, grip: 1, mass: 1 } },
+  { id: 'anna', name: 'Anna', kind: 'Rennfahrerin', note: 'Flink, mit wehendem Zopf.', torso: 0x7a5cff, mods: { max: 0.97, acc: 1.05, turn: 1.14, grip: 1, mass: 0.9 } },
+  { id: 'flavio', name: 'Flavio', kind: 'Kartprofi', note: 'Schwer und schnell.', torso: 0x2b4fa8, mods: { max: 1.06, acc: 1, turn: 0.92, grip: 1, mass: 1.3 } },
   { id: 'quaki', name: 'Quaki', kind: 'Frosch', note: 'Haftet wie Kleber.', torso: 0xff7a59, mods: { max: 1, acc: 0.95, turn: 1, grip: 1.2, mass: 1 } },
-  { id: 'pip', name: 'Pip', kind: 'Pinguin', note: 'Startet wie eine Rakete.', torso: 0xe63946, mods: { max: 0.97, acc: 1.2, turn: 1, grip: 1, mass: 0.95 } },
-  { id: 'bolzen', name: 'Bolzen', kind: 'Roboter', note: 'Schwer und schnell.', torso: 0x6b7a99, mods: { max: 1.06, acc: 1, turn: 0.92, grip: 1, mass: 1.3 } },
-  { id: 'mausi', name: 'Mausi', kind: 'Katze', note: 'Flink um jede Kurve.', torso: 0x4fd8ff, mods: { max: 0.97, acc: 1, turn: 1.14, grip: 1, mass: 0.9 } },
-  { id: 'broesel', name: 'Brösel', kind: 'Mops', note: 'Rammt alles weg.', torso: 0x7a5cff, mods: { max: 1, acc: 1.02, turn: 1, grip: 1.1, mass: 1.2 } },
-  { id: 'wuschel', name: 'Wuschel', kind: 'Monster', note: 'Wuselig und wendig.', torso: 0xffb347, mods: { max: 1, acc: 1.1, turn: 1.06, grip: 0.95, mass: 0.85 } }
+  { id: 'janos', name: 'Janos', kind: 'Tigerente', note: 'Startet wie ein Blitz.', torso: 0xffc83d, mods: { max: 0.97, acc: 1.2, turn: 1, grip: 1, mass: 0.95 } }
 ];
 const MOD_NAMES = { max: 'Tempo', acc: 'Antritt', turn: 'Lenkung', grip: 'Haftung', mass: 'Gewicht' };
 const FACES = {
-  quaki: '<circle cx="24" cy="29" r="16" fill="#5fd37a"/><circle cx="14" cy="14" r="7" fill="#5fd37a"/><circle cx="34" cy="14" r="7" fill="#5fd37a"/><circle cx="14" cy="14" r="4.6" fill="#fff"/><circle cx="34" cy="14" r="4.6" fill="#fff"/><circle cx="15" cy="14.5" r="2.2" fill="#111"/><circle cx="35" cy="14.5" r="2.2" fill="#111"/><path d="M13 31q11 9 22 0" fill="none" stroke="#14301b" stroke-width="3" stroke-linecap="round"/>',
-  pip: '<circle cx="24" cy="25" r="18" fill="#20314f"/><ellipse cx="24" cy="29" rx="12" ry="11" fill="#fff"/><circle cx="18" cy="21" r="3.2" fill="#111"/><circle cx="30" cy="21" r="3.2" fill="#111"/><path d="M19 28h10l-5 7z" fill="#ff9f1c"/>',
-  bolzen: '<rect x="8" y="12" width="32" height="28" rx="6" fill="#aab4c8"/><rect x="12" y="20" width="24" height="9" rx="4" fill="#4fd8ff"/><rect x="22.5" y="5" width="3" height="8" fill="#6b7a99"/><circle cx="24" cy="5" r="3.2" fill="#ff4b3e"/><rect x="16" y="33" width="16" height="3" rx="1.5" fill="#6b7a99"/>',
-  mausi: '<path d="M8 22 11 5l11 8zM40 22 37 5 26 13z" fill="#ff9a3c"/><circle cx="24" cy="28" r="16" fill="#ff9a3c"/><circle cx="18" cy="25" r="3" fill="#111"/><circle cx="30" cy="25" r="3" fill="#111"/><path d="M22 31h4l-2 3z" fill="#ff7aa8"/><path d="M6 30h10M6 34l10-1M42 30H32M42 34l-10-1" stroke="#fff" stroke-width="1.5"/>',
-  broesel: '<ellipse cx="9" cy="22" rx="5" ry="10" fill="#4a3426"/><ellipse cx="39" cy="22" rx="5" ry="10" fill="#4a3426"/><circle cx="24" cy="25" r="16" fill="#d9b98c"/><ellipse cx="24" cy="31" rx="9" ry="7" fill="#4a3426"/><circle cx="18" cy="21" r="3.2" fill="#111"/><circle cx="30" cy="21" r="3.2" fill="#111"/><rect x="21.5" y="35" width="5" height="6" rx="2.5" fill="#ff7aa8"/>',
-  wuschel: '<path d="M14 14 12 4l8 6zM34 14l2-10-8 6z" fill="#ffd23f"/><circle cx="24" cy="26" r="17" fill="#9b6cff"/><circle cx="24" cy="23" r="9" fill="#fff"/><circle cx="25.5" cy="23" r="4.2" fill="#111"/><path d="M15 36q9 6 18 0" fill="none" stroke="#2b1760" stroke-width="3" stroke-linecap="round"/>'
+  tom: '<circle cx="24" cy="29" r="16" fill="#e63946"/><circle cx="18" cy="31" r="2.2" fill="#fff"/><circle cx="30" cy="31" r="2.2" fill="#fff"/><circle cx="18.6" cy="31.3" r="1.1" fill="#111"/><circle cx="30.6" cy="31.3" r="1.1" fill="#111"/><path d="M18 37q6 5 12 0" fill="none" stroke="#7a1620" stroke-width="2.2" stroke-linecap="round"/><rect x="22.4" y="2" width="3.2" height="7" rx="1.6" fill="#2f8f3a"/><path d="M24 9l-6 2 4 1-3 3 5-2 5 2-3-3 4-1z" fill="#3aa655"/><path d="M10 24a14 12 0 0 1 28 0z" fill="#2b6fd0"/><rect x="8" y="22.5" width="32" height="3.4" rx="1.7" fill="#2b6fd0"/><circle cx="24" cy="14.6" r="6" fill="#fff"/><text x="24" y="16.4" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="11" fill="#2b6fd0">T</text>',
+  anna: '<ellipse cx="40" cy="32" rx="5" ry="11" fill="#f2c94c"/><circle cx="24" cy="25" r="17" fill="#f2c94c"/><circle cx="24" cy="29" r="12.5" fill="#f2c6a0"/><path d="M10 25q14-17 28 0q-5-7-14-7t-14 7z" fill="#f2c94c"/><circle cx="19" cy="29" r="2" fill="#111"/><circle cx="29" cy="29" r="2" fill="#111"/><path d="M20 35q4 3 8 0" fill="none" stroke="#c0394e" stroke-width="2" stroke-linecap="round"/><circle cx="37" cy="20" r="3" fill="#ff4b9a"/>',
+  flavio: '<circle cx="24" cy="29" r="15" fill="#f2c6a0"/><path d="M8 25a16 16 0 0 1 32 0z" fill="#d62828"/><rect x="26" y="22" width="19" height="5" rx="2.5" fill="#d62828"/><circle cx="22" cy="15" r="6.4" fill="#fff"/><text x="22" y="19.6" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="11" fill="#d62828">F</text><circle cx="18" cy="31" r="2" fill="#111"/><circle cx="30" cy="31" r="2" fill="#111"/><ellipse cx="24" cy="34" rx="3.4" ry="3" fill="#e8a07c"/><path d="M24 37q-4 -2 -10 1q2 5 10 1q8 4 10 -1q-6 -3 -10 -1z" fill="#3a2418"/>',
+  janos: '<circle cx="24" cy="30" r="15" fill="#ffd23f"/><path d="M13 22l3 7M24 20v8M35 22l-3 7" stroke="#222" stroke-width="3" stroke-linecap="round"/><circle cx="17" cy="31" r="4" fill="#fff"/><circle cx="31" cy="31" r="4" fill="#fff"/><circle cx="18" cy="31.5" r="2" fill="#111"/><circle cx="32" cy="31.5" r="2" fill="#111"/><ellipse cx="24" cy="39" rx="8" ry="4.2" fill="#ff8a1f"/><path d="M9 23a15 13 0 0 1 30 0z" fill="#2b6fd0"/><rect x="27" y="21" width="17" height="4" rx="2" fill="#2b6fd0"/><circle cx="21" cy="13" r="6" fill="#fff"/><text x="21" y="17.4" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="11" fill="#2b6fd0">J</text>',
+  quaki: '<circle cx="24" cy="33" r="14" fill="#8ae068"/><circle cx="12" cy="24" r="6" fill="#8ae068"/><circle cx="36" cy="24" r="6" fill="#8ae068"/><circle cx="12" cy="24" r="4" fill="#fff"/><circle cx="36" cy="24" r="4" fill="#fff"/><circle cx="13" cy="24.5" r="2" fill="#111"/><circle cx="37" cy="24.5" r="2" fill="#111"/><path d="M14 37q10 7 20 0" fill="none" stroke="#14301b" stroke-width="3" stroke-linecap="round"/><path d="M10 19a14 14 0 0 1 28 0z" fill="#1f9d3a"/><rect x="8" y="17.5" width="32" height="3.6" rx="1.8" fill="#1f9d3a"/><circle cx="24" cy="10" r="6.6" fill="#fff"/><text x="24" y="15" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="12" fill="#1f9d3a">L</text>',
 };
 
 const hx = n => '#' + ('000000' + n.toString(16)).slice(-6);
 /* Skins: [Name, Hauptfarbe, Akzent, Oberkörper]; Skin 0 = Original */
 const CHAR_SKINS = {
-  quaki: [['Original', 0x5fd37a, 0x14301b, 0xff7a59], ['Lila', 0xb36bff, 0x2a1450, 0x2fd0c0], ['Gold', 0xffc83d, 0x5a3a00, 0xe0502f]],
-  pip: [['Original', 0x20314f, 0xff9f1c, 0xe63946], ['Eis', 0x3b82c4, 0xffd23f, 0x1d3557], ['Rosa', 0xd9468f, 0xffe066, 0x6a1b9a]],
-  bolzen: [['Original', 0xaab4c8, 0x4fd8ff, 0x6b7a99], ['Gold', 0xe0b84e, 0xff4b3e, 0x7a5a1e], ['Neon', 0x2b2f4a, 0x62ff8a, 0x1a1d2e]],
-  mausi: [['Original', 0xff9a3c, 0xff7aa8, 0x4fd8ff], ['Grau', 0x9aa3b5, 0xff7aa8, 0xff7aa8], ['Nacht', 0x2b2b36, 0xffd23f, 0xffd23f]],
-  broesel: [['Original', 0xd9b98c, 0x4a3426, 0x7a5cff], ['Schoko', 0x8a5a3c, 0x2a1a10, 0xff7a59], ['Weiß', 0xf2efe6, 0x9a8f80, 0x2fd0c0]],
-  wuschel: [['Original', 0x9b6cff, 0xffd23f, 0xffb347], ['Grün', 0x4fd37a, 0xff4b9a, 0x7a5cff], ['Rot', 0xff5a4a, 0xfff2a8, 0x2b2f4a]]
+  tom: [['Original', 0xe63946, 0x2b6fd0, 0xc92a3a], ['Gelb', 0xffc83d, 0xe63946, 0xe0a82e], ['Grün', 0x7ac143, 0x2b2f4a, 0x5a9a2e]],
+  anna: [['Original', 0xf2c94c, 0xff4b9a, 0x7a5cff], ['Rot', 0xd9482f, 0xffd23f, 0x2fd0c0], ['Dunkel', 0x3a2a24, 0x4fd8ff, 0xff4b9a]],
+  flavio: [['Original', 0xd62828, 0x3a2418, 0x2b4fa8], ['Grün', 0x2f9e44, 0x1b1e27, 0xd62828], ['Blau', 0x2f6fd0, 0x7a5a3a, 0xffd23f]],
+  janos: [['Original', 0xffd23f, 0x2b6fd0, 0xffc83d], ['Orange', 0xffa030, 0xe63946, 0xff8a2b], ['Hell', 0xfff0a0, 0x2fa05a, 0xffe066]],
+  quaki: [['Original', 0x8ae068, 0x1f9d3a, 0xff7a59], ['Lila', 0xb36bff, 0xffd23f, 0x2fd0c0], ['Gold', 0xffc83d, 0xe0502f, 0x5a3aa0]]
 };
 /* Lacke: [Name, Farbe, Zweitfarbe, Muster] */
 const KART_SKINS = {
@@ -54,7 +51,7 @@ const TRACKS = [
     sky: ['#ff9bd2', '#ffe6f4'], top: '#ffb3d9', sprinkles: true, cliff: ['#5a3324', '#74422f'], curb: [0xff6ad5, 0xffffff], decor: 'candy', puddle: 'syrup', walker: 'gummy', sun: 0xffe0f0 },
   { id: 'plansch', name: 'Plansch-Park', info: 'Holzsteg, rutschige Pfützen, Enten', R: 860, gaps: 3,
     f: t => 1 + 0.2 * Math.sin(4 * t + 0.3) + 0.1 * Math.cos(3 * t) + 0.04 * Math.sin(6 * t + 2),
-    sky: ['#25b2e8', '#d6f4ff'], top: '#f1d28a', cliff: ['#c99a52', '#dcb06a'], curb: [0x2fa8e0, 0xffffff], decor: 'water', puddle: 'water', walker: 'duck', sun: 0xfff4d8 }
+    loop: true, sky: ['#25b2e8', '#d6f4ff'], top: '#f1d28a', cliff: ['#c99a52', '#dcb06a'], curb: [0x2fa8e0, 0xffffff], decor: 'water', puddle: 'water', walker: 'duck', sun: 0xfff4d8 }
 ];
 const BOTS = [{ name: 'Rex', skill: 0.88 }, { name: 'Mimi', skill: 0.92 }, { name: 'Olli', skill: 0.95 }];
 const ITEMS = {

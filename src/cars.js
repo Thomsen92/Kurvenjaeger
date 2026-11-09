@@ -15,7 +15,7 @@ export function placeCar(c, slot) {
   const pts = S.world.pts, k = 6 + row * 9, i = (N - k) % N, p = pts[i], lat = (col - (per - 1) / 2) * 32;
   Object.assign(c, { x: p.x + p.nx * lat, z: p.z + p.nz * lat, a: p.ang, idx: i, prog: -k, lat, s: 0, vx: 0, vz: 0, y: 0, vy: 0, steer: 0,
     boost: 0, padCd: 0, gapCd: 0, finished: false, finishT: 0, stuck: 0, lap: 0, lapStart: 0, bestLap: 0, speedMul: 1, wrong: 0, lane: rand(-28, 28),
-    item: null, roll: 0, pending: null, itemT: 0, shield: 0, spin: 0, spinAng: 0, inv: 0, slow: 0, drift: 0, air: false, fall: false, safe: i, rank: slot, onPlat: true, chute: false, chuteT: 0, vTerm: 60, hop: false, feather: false, rollAng: 0, freeze: 0, ink: 0, jumpCd: 0 });
+    item: null, roll: 0, pending: null, itemT: 0, shield: 0, spin: 0, spinAng: 0, inv: 0, slow: 0, drift: 0, air: false, fall: false, safe: i, rank: slot, onPlat: true, chute: false, chuteT: 0, vTerm: 60, hop: false, feather: false, rollAng: 0, freeze: 0, ink: 0, jumpCd: 0, loop: null, pitch: 0 });
 }
 export const rnd3 = () => Math.floor(Math.random() * 3);
 export function resetRace() {
@@ -50,6 +50,6 @@ export function locate(c) {
 export function respawn(c) {
   const pts = S.world.pts, back = S.world.near[((c.safe % N) + N) % N] ? 54 : 4, i = ((c.safe - back) % N + N) % N, p = pts[i];
   c.prog += wrapIdx(i - c.idx); c.idx = i;
-  Object.assign(c, { x: p.x, z: p.z, a: p.ang, s: 60, vx: p.tx * 60, vz: p.tz * 60, y: 0, vy: 0, fall: false, air: false, lat: 0, inv: 2.2, spin: 0, spinAng: 0, boost: 0, drift: 0, steer: 0, slow: 0 });
+  Object.assign(c, { x: p.x, z: p.z, a: p.ang, s: 60, vx: p.tx * 60, vz: p.tz * 60, y: 0, vy: 0, fall: false, air: false, lat: 0, inv: 2.2, spin: 0, spinAng: 0, boost: 0, drift: 0, steer: 0, slow: 0, loop: null, pitch: 0 });
   if (c === S.player && S.state === 'race') banner('Zurück ins Rennen', '', 'show');
 }

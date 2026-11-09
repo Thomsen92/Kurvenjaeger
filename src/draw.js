@@ -3,17 +3,21 @@ import { S } from './state.js';
 import { clamp, TAU, angDiff, rand, ctx } from './util.js';
 import { sun, scene } from './core.js';
 import { puffs } from './karts.js';
+import { loopLat } from './world.js';
 
 /* ---------- Zeichnen ---------- */
-export const cam = { a: 0, fov: 64, init: false };
+export const cam = { a: 0, fov: 64, init: false, lk: 0, pos: new THREE.Vector3(), look: new THREE.Vector3() };
 export const tv = new THREE.Vector3();
+const Y_AXIS = new THREE.Vector3(0, 1, 0), Z_AXIS = new THREE.Vector3(0, 0, 1), qPitch = new THREE.Quaternion(), qYaw = new THREE.Quaternion();
 export function proj(x, y, z) { tv.set(x, y, z).project(S.camera); return [(tv.x * 0.5 + 0.5) * S.VW, (-tv.y * 0.5 + 0.5) * S.VH, tv.z]; }
 
 export function draw(dt) {
   const now = performance.now();
   for (const c of S.cars) {
     const u = c.mesh.userData, g = c.mesh;
-    g.position.set(c.x, c.y, c.z); g.rotation.y = -c.a + c.spinAng;
+    g.position.set(c.x, c.y, c.z);
+    if (c.loop) g.quaternion.setFromAxisAngle(Y_AXIS, -S.world.pts[S.world.loop.i0].ang).multiply(qPitch.setFromAxisAngle(Z_AXIS, c.pitch)).multiply(qYaw.setFromAxisAngle(Y_AXIS, -c.loop.psi + c.spinAng));
+    else g.rotation.set(0, -c.a + c.spinAng, c.pitch || 0);
     u.body.rotation.x = (c.feather && c.air) ? c.rollAng : clamp(-c.steer * 0.07 * clamp(c.s / 100, 0, 1.2), -0.1, 0.1) + (c.air ? -0.12 : 0);
     u.body.position.y = c.boost > 0 ? 0.6 : 0;
     for (const w of u.wheels) w.rotation.z -= c.s * dt / 3.6;
@@ -48,6 +52,17 @@ export function draw(dt) {
     const sh = S.shakeT > 0 ? rand(-1, 1) * 3 : 0; S.shakeT = Math.max(0, S.shakeT - dt);
     S.camera.position.set(ref.x - Math.cos(cam.a) * dist + sh, h + ly * 0.7 + sh * 0.5, ref.z - Math.sin(cam.a) * dist + sh);
     S.camera.lookAt(ref.x + Math.cos(cam.a) * 55, 9 + ly * 0.6, ref.z + Math.sin(cam.a) * 55);
+    /* Im Looping filmt die Kamera von der Kreismitte aus, sonst läge sie in der Straße */
+    cam.lk += ((ref.loop ? 1 : 0) - cam.lk) * Math.min(1, dt * 5);
+    if (ref.loop) {
+      const L = S.world.loop, p0 = S.world.pts[L.i0], sc = L.k * ref.loop.phi - L.R * 0.45;
+      cam.pos.set(p0.x + p0.tx * sc + p0.nx * (loopLat(L, ref.loop.phi) + ref.loop.rel) * 0.5, L.R + 10, p0.z + p0.tz * sc + p0.nz * (loopLat(L, ref.loop.phi) + ref.loop.rel) * 0.5);
+      cam.look.set(ref.x, ref.y + 6, ref.z);
+    }
+    if (cam.lk > 0.01) {
+      S.camera.position.lerp(cam.pos, cam.lk);
+      S.camera.lookAt(new THREE.Vector3(ref.x + Math.cos(cam.a) * 55, 9 + ly * 0.6, ref.z + Math.sin(cam.a) * 55).lerp(cam.look, cam.lk));
+    }
     cam.fov += (base + spdK * 7 + boostK * 9 - cam.fov) * Math.min(1, dt * 5); S.camera.fov = cam.fov;
   }
   S.camera.updateProjectionMatrix();

@@ -77,8 +77,25 @@ export function buildWorld(def) {
     for (let k = -44; k <= g.len + 6; k++) near[(g.i + k + N) % N] = 1;
     for (let k = -6; k <= 0; k++) rampH[(g.i + k + N) % N] = RAMP_H * (k + 6) / 6;
   }
+  // Looping (nur Strecken mit def.loop): gerades Stück ohne Abgründe suchen; die Straße darunter entfällt, wer ohne Boost kommt, stürzt ab
+  let loop = null;
+  if (def.loop) {
+    const ds = S.world_ds, m = Math.round(70 / ds);
+    let bi = -1, bc = 9;
+    for (let i = Math.floor(N * 0.2); i < Math.floor(N * 0.9); i += 3) {
+      let bad = false, c = 0;
+      for (let q = -64; q <= m + 60; q += 3) { const j = (i + q + N) % N; if (near[j]) { bad = true; break; } c = Math.max(c, turn[j]); }
+      if (!bad && c < bc) { bc = c; bi = i; }
+    }
+    if (bi >= 0) {
+      const a = pts[bi], b = pts[(bi + m) % N], shift = Math.hypot(b.x - a.x, b.z - a.z);
+      loop = { i0: bi, m, R: LOOP_R, k: shift / TAU, shift, lc: ROAD_HALF / 2, hw: ROAD_HALF / 2 - 1 };
+      for (let k = 0; k < m; k++) gap[(bi + k) % N] = 1;
+      for (let k = -44; k <= m + 6; k++) near[(bi + k + N) % N] = 1;
+    }
+  }
   const solidSeg = [];
-  for (let i = 0; i < N; i++) { let ok = true; for (const g of gaps) { const d = (i - g.i + N) % N; if (d < g.len) ok = false; } if (ok) solidSeg.push(i); }
+  for (let i = 0; i < N; i++) { let ok = true; for (const g of gaps) { const d = (i - g.i + N) % N; if (d < g.len) ok = false; } if (loop && (i - loop.i0 + N) % N < loop.m) ok = false; if (ok) solidSeg.push(i); }
   const rampSegs = [];
   for (const g of gaps) for (let k = -6; k < 0; k++) rampSegs.push((g.i + k + N) % N);
   const rampFn = off => i => rampH[i % N] + off;
@@ -115,6 +132,8 @@ export function buildWorld(def) {
     group.add(grp);
   }
 
+  if (loop) buildLoop(def, group, pts, loop);
+
   // Start und Ziel
   const p0 = pts[0];
   const lineG = new THREE.Group(); lineG.position.set(p0.x, 0.45, p0.z); lineG.rotation.y = -(p0.ang + Math.PI / 2);
@@ -130,15 +149,16 @@ export function buildWorld(def) {
 
   // Boost-Felder
   const pads = [];
-  const addPad = idx => {
+  const addPad = (idx, lat = 0) => {
     idx = (idx + N) % N; const p = pts[idx];
-    const pg = new THREE.Group(); pg.position.set(p.x, 0.5, p.z); pg.rotation.y = -p.ang;
+    const pg = new THREE.Group(); pg.position.set(p.x + p.nx * lat, 0.5, p.z + p.nz * lat); pg.rotation.y = -p.ang;
     for (const zz of [-16, 16]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(34, 30), bas(0xffffff, { map: padTex }));
-    m.rotation.x = -Math.PI / 2; m.position.z = zz; pg.add(m); } group.add(pg); pads.push({ idx });
+    m.rotation.x = -Math.PI / 2; m.position.z = zz; pg.add(m); } group.add(pg); pads.push({ idx, lat });
   };
   const pc = Math.round(N / 145);
   for (let k = 0; k < pc; k++) { const idx = Math.floor(k * N / pc + N / (2 * pc)); if (!near[idx]) addPad(idx); }
   for (const g of gaps) addPad(g.i - 16);
+  if (loop) addPad(loop.i0 - 14, loop.lc);
 
   // Item-Würfel
   const boxes = [], boxG = new THREE.BoxGeometry(11, 11, 11); boxG.userData.keep = true;
@@ -163,12 +183,61 @@ export function buildWorld(def) {
     const jg = makeJumpPad(); jg.scale.setScalar(1.5); jg.position.set(jx, 0.4, jz); jg.rotation.y = -p.ang; group.add(jg);
     jumps.push({ x: jx, z: jz, mesh: jg, anim: 0 });
   }
-  S.world = { def, group, pts, turn, gaps, gap, launch, near, rampH, pads, boxes, jumps, length };
+  S.world = { def, group, pts, turn, gaps, gap, launch, near, rampH, pads, boxes, jumps, length, loop };
   buildScenery(def, group, pts);
   buildPuddles(def, group, pts);
   buildWalkers(def, group, pts);
   scene.add(group);
   buildMini(def, pts);
+}
+
+export const LOOP_R = 80;
+/* Mitte der Looping-Bahn bei phi: wandert von rechts (Einfahrt) nach links (Ausfahrt), damit die Bahnen nicht durch sich hindurchführen */
+export const loopLat = (L, phi) => L.lc - 2 * L.lc * phi / TAU;
+/* Punkt im Looping: phi 0..2π, lat = seitlicher Abstand zur Streckenmitte. Kreis in der senkrechten Ebene der Fahrtrichtung, nach vorn um shift versetzt. */
+export function loopPoint(L, p0, phi, lat) {
+  const s = L.R * Math.sin(phi) + L.k * phi, h = L.R * (1 - Math.cos(phi));
+  return new THREE.Vector3(p0.x + p0.tx * s + p0.nx * lat, h, p0.z + p0.tz * s + p0.nz * lat);
+}
+export function buildLoop(def, group, pts, L) {
+  const p0 = pts[L.i0], J = 96, pos = [], uv = [], idx = [];
+  let arc = 0, prev = null;
+  for (let j = 0; j <= J; j++) {
+    const phi = j / J * TAU, lc = loopLat(L, phi), a = loopPoint(L, p0, phi, lc - L.hw), b = loopPoint(L, p0, phi, lc + L.hw), mid = loopPoint(L, p0, phi, lc);
+    if (prev) arc += mid.distanceTo(prev); prev = mid;
+    pos.push(a.x, a.y + 0.3, a.z, b.x, b.y + 0.3, b.z); uv.push(0, arc / 120, 1, arc / 120);
+    if (j < J) { const q = j * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  group.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: makeRoadTex(def), side: THREE.DoubleSide })));
+  // Randrohre
+  const railM = new THREE.MeshLambertMaterial({ color: def.curb[0] });
+  for (const s of [-1, 1]) {
+    const cv = new THREE.CatmullRomCurve3(Array.from({ length: J + 1 }, (_, j) => loopPoint(L, p0, j / J * TAU, loopLat(L, j / J * TAU) + s * (L.hw + 2))));
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(cv, J, 3.2, 6, false), railM));
+  }
+  // Pfeiler und Querbalken
+  const postM = lam(0x2b3040), sc = L.k * Math.PI, top = 2 * L.R;
+  const pg = new THREE.Group(); pg.position.set(p0.x + p0.tx * sc, 0, p0.z + p0.tz * sc); pg.rotation.y = -p0.ang;
+  for (const s of [-1, 1]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(7, top + 22, 7), postM); post.position.set(0, (top + 22) / 2 - 40, s * (ROAD_HALF + 20)); pg.add(post);
+    const ball = new THREE.Mesh(sphereG, bas(0xff4b3e)); ball.scale.setScalar(6); ball.position.set(0, top + 28, s * (ROAD_HALF + 20)); pg.add(ball);
+  }
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(7, 7, (ROAD_HALF + 20) * 2), postM); beam.position.set(0, top + 14, 0); pg.add(beam);
+  group.add(pg);
+  // Hinweisschild vor dem Boost-Feld
+  const sp = pts[(L.i0 - 30 + N) % N], sg = new THREE.Group(); sg.position.set(sp.x, 0, sp.z); sg.rotation.y = -sp.ang;
+  const W = ROAD_HALF + 12;
+  for (const s of [-1, 1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(4, 48, 4), postM); post.position.set(0, 24, s * W); sg.add(post); }
+  const sb = new THREE.Mesh(new THREE.BoxGeometry(5, 14, W * 2), postM); sb.position.set(0, 42, 0); sg.add(sb);
+  const tex = canvasTex(512, 96, (c, w, h) => {
+    c.fillStyle = '#12151e'; c.fillRect(0, 0, w, h); c.fillStyle = '#4fd8ff'; c.font = '40px "Russo One", Arial Black, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('LOOPING · RECHTS · BOOST!', w / 2, h / 2 + 2);
+  });
+  const sban = new THREE.Mesh(new THREE.PlaneGeometry(W * 2 - 4, 12), bas(0xffffff, { map: tex })); sban.rotation.y = -Math.PI / 2; sban.position.set(-2.8, 42, 0); sg.add(sban);
+  group.add(sg);
 }
 
 export function buildScenery(def, group, pts) {
@@ -213,6 +282,7 @@ export function buildMini(def, pts) {
   pts.forEach((p, i) => { const x = ox + (p.x - minx) * sc, y = oy + (p.z - minz) * sc; i ? mg.lineTo(x, y) : mg.moveTo(x, y); });
   mg.closePath(); mg.stroke();
   mg.fillStyle = '#ff4b3e';
+  if (S.world.loop) { const p = pts[(S.world.loop.i0 + (S.world.loop.m >> 1)) % N]; mg.fillStyle = '#4fd8ff'; mg.beginPath(); mg.arc(ox + (p.x - minx) * sc, oy + (p.z - minz) * sc, 3.6, 0, TAU); mg.fill(); mg.fillStyle = '#ff4b3e'; }
   for (const g of S.world.gaps) { const p = pts[(g.i + 7) % N]; mg.beginPath(); mg.arc(ox + (p.x - minx) * sc, oy + (p.z - minz) * sc, 3.2, 0, TAU); mg.fill(); }
   S.mini = { img, MM, sc, ox, oy, minx, minz };
 }

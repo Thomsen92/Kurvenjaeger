@@ -1,6 +1,7 @@
 import { ROAD_HALF, CURB, EDGE, LAPS, RAMP_H, G } from './data.js';
 import { S } from './state.js';
-import { clamp, angDiff, N, rand, btn, keys, vib, wrapIdx } from './util.js';
+import { clamp, angDiff, N, rand, btn, keys, vib, wrapIdx, TAU } from './util.js';
+import { loopPoint, loopLat } from './world.js';
 import { spawnPuff } from './karts.js';
 import { snd } from './deco.js';
 import { locate, respawn } from './cars.js';
@@ -9,16 +10,78 @@ import { aiControl } from './ai.js';
 import { banner } from './input.js';
 
 /* ---------- Fahrphysik ---------- */
+/* Looping mit echter Physik: das Auto fährt frei auf der Bahn (Lenken, Bremsen, seitlich abstürzen), die Schwerkraft bremst
+   beim Hochfahren, und am Scheitel muss es schnell genug sein (v² ≥ g·R), sonst löst es sich von der Bahn und fällt.
+   Ohne Boost reicht das Tempo nicht (Grenze ca. 170, Höchsttempo ohne Boost ca. 165). Links der Einfahrt fehlt der Boden. */
+const LOOP_G = 72;
+function tryLoop(c) {
+  const L = S.world.loop, di = wrapIdx(c.idx - L.i0), p0 = S.world.pts[L.i0], psi = angDiff(c.a, p0.ang);
+  if (di < 0 || di > 4 || c.s < 20 || Math.abs(c.lat - L.lc) > L.hw - 5 || Math.abs(psi) > 0.9) return false;
+  c.loop = { phi: 0, rel: c.lat - L.lc, psi, prog0: c.prog - di };
+  c.air = false; c.onPlat = false; c.drift = 0; c.chute = false; c.hop = false; c.feather = false;
+  if (c === S.player) { banner('Looping!', '', 'show'); vib(30); }
+  snd('boost');
+  return true;
+}
+/* Löst das Auto von der Bahn: es fliegt mit seiner Geschwindigkeit weiter und stürzt ab */
+function loopFall(c, p0, th, vt, vl) {
+  c.loop = null; c.fall = true; c.air = false; c.onPlat = false; c.chute = false; c.hop = false;
+  c.vx = p0.tx * vt * Math.cos(th) + p0.nx * vl; c.vz = p0.tz * vt * Math.cos(th) + p0.nz * vl; c.vy = vt * Math.sin(th);
+  if (c === S.player) { banner('Abgestürzt!', '', 'show'); vib(60); }
+}
+function stepLoop(c, dt) {
+  const L = S.world.loop, p0 = S.world.pts[L.i0], l = c.loop, d = c.st;
+  // Steuerung wie auf der Straße; Computergegner halten Spur und Richtung
+  const auto = !c.isPlayer || c.finished;
+  let steerT = 0, brake = false;
+  if (auto) steerT = clamp(-(l.rel * 0.05 + l.psi * 2), -1, 1);
+  else {
+    steerT = (btn.R || keys['arrowright'] || keys['d'] ? 1 : 0) - (btn.L || keys['arrowleft'] || keys['a'] ? 1 : 0);
+    brake = btn.drift || keys['arrowdown'] || keys['s'] || keys['shift'];
+  }
+  if (c.freeze > 0) { c.freeze -= dt; steerT = 0; brake = false; c.s = 0; }
+  const flip = steerT === 0 || (c.steer !== 0 && Math.sign(steerT) !== Math.sign(c.steer));
+  c.steer += clamp(steerT - c.steer, -(flip ? 9 : 5.5) * dt, (flip ? 9 : 5.5) * dt);
+
+  const cs = Math.cos(l.phi), sn = Math.sin(l.phi), dC = Math.sqrt(L.R * L.R + 2 * L.R * L.k * cs + L.k * L.k);
+  const th = Math.atan2(L.R * sn, L.R * cs + L.k);
+  let v = c.s, psi = l.psi;
+  if (brake) v = Math.max(0, v - 130 * dt);
+  psi = clamp(psi + c.steer * d.turn * clamp(v / 40, 0, 1) * (1 - 0.28 * Math.max(0, clamp(v / d.max, -0.3, 1.2))) * (brake ? 1.25 : 1) * dt, -1.3, 1.3);
+  let vt = v * Math.cos(psi), vl = v * Math.sin(psi);
+  vt -= LOOP_G * Math.sin(th) * dt;                    // Schwerkraft entlang der Bahn
+  if (c.boost > 0) { const dv = d.acc * 0.8 * dt; vt += dv * Math.cos(psi); vl += dv * Math.sin(psi); }
+  // Andruck an die Bahn: vt²/R + g·cos(θ); wird er negativ oder bleibt das Auto fast stehen, löst es sich
+  if (vt < 10 || vt * vt / L.R + LOOP_G * Math.cos(th) < 0) { loopFall(c, p0, th, vt, vl); return; }
+  l.phi += vt * dt / dC; l.rel += vl * dt;
+  if (Math.abs(l.rel) > L.hw + 2) { loopFall(c, p0, th, vt, vl); return; }        // seitlich über den Rand
+  v = Math.hypot(vt, vl); psi = Math.atan2(vl, vt); l.psi = psi; c.s = v;
+
+  if (l.phi >= TAU) {
+    const i = (L.i0 + L.m) % N, p = S.world.pts[i], lat = loopLat(L, TAU) + l.rel;
+    c.loop = null; c.pitch = 0; c.y = 0; c.vy = 0; c.air = false; c.onPlat = true;
+    c.x = p.x + p.nx * lat; c.z = p.z + p.nz * lat; c.a = p.ang + psi; c.idx = i; c.lat = lat; c.prog = l.prog0 + L.m; c.safe = i;
+    c.vx = Math.cos(c.a) * c.s; c.vz = Math.sin(c.a) * c.s; c.gapCd = 0.5;
+    if (c === S.player) S.shakeT = 0.22;
+    return;
+  }
+  const q = loopPoint(L, p0, l.phi, loopLat(L, l.phi) + l.rel);
+  c.x = q.x; c.y = q.y; c.z = q.z; c.a = p0.ang + psi; c.vx = Math.cos(c.a) * c.s; c.vz = Math.sin(c.a) * c.s; c.vy = 0;
+  c.pitch = Math.atan2(L.R * Math.sin(l.phi), L.R * Math.cos(l.phi) + L.k);
+  c.prog = l.prog0 + L.m * l.phi / TAU;
+}
+
 export function stepCar(c, dt) {
   const d = c.st, pts = S.world.pts;
   c.inv = Math.max(0, c.inv - dt); c.ink = Math.max(0, c.ink - dt); c.slow = Math.max(0, c.slow - dt); c.shield = Math.max(0, c.shield - dt);
   c.boost = Math.max(0, c.boost - dt); c.padCd -= dt; c.gapCd -= dt; c.jumpCd -= dt;
   if (c.roll > 0) { c.roll -= dt; if (c.roll <= 0) { c.item = c.pending; c.itemT = rand(0.8, 2.6); } }
   if (c.fall) {
-    c.vy -= 520 * dt; c.y += c.vy * dt; c.x += c.vx * dt; c.z += c.vz * dt; c.spinAng += dt * 7; locate(c);
+    c.vy -= 520 * dt; c.y += c.vy * dt; c.x += c.vx * dt; c.z += c.vz * dt; c.spinAng += dt * 7; if (c.pitch) c.pitch += dt * 2.5; locate(c);
     if (c.y < -320) respawn(c);
     return;
   }
+  if (c.loop) { stepLoop(c, dt); return; }
   const auto = !c.isPlayer || c.finished;
   let steerT = 0, brake = false;
   if (auto) steerT = aiControl(c, dt);
@@ -67,6 +130,7 @@ export function stepCar(c, dt) {
   c.x += c.vx * dt; c.z += c.vz * dt;
   locate(c);
 
+  if (S.world.loop && !c.air && tryLoop(c)) return;
   // Insel, Rampen, Abgrund
   const onPlat = Math.abs(c.lat) < EDGE && !S.world.gap[c.idx];
   c.onPlat = onPlat;
@@ -91,7 +155,7 @@ export function stepCar(c, dt) {
 
   if (onGrass && Math.abs(c.s) > 40 && Math.random() < dt * 28) spawnPuff(c.x - fx * 10, 3, c.z - fz * 10, S.world.def.decor === 'forest' ? 0x7a9a5a : 0xb79bff);
   for (const pd of S.world.pads) {
-    if (Math.abs(wrapIdx(c.idx - pd.idx)) <= 3 && Math.abs(c.lat) < 36 && c.padCd <= 0 && !c.air) { c.boost = Math.max(c.boost, 1.1); c.padCd = 1.2; }
+    if (Math.abs(wrapIdx(c.idx - pd.idx)) <= 3 && Math.abs(c.lat - (pd.lat || 0)) < 36 && c.padCd <= 0 && !c.air) { c.boost = Math.max(c.boost, 1.1); c.padCd = 1.2; }
   }
   if (!c.air) for (const jp of S.world.jumps) {
     const dx = c.x - jp.x, dz = c.z - jp.z;

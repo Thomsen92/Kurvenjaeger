@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { KART_SKINS, CHAR_SKINS } from './data.js';
 import { S } from './state.js';
 import { TAU, rand } from './util.js';
-import { scene, lam, bas, sphereG, eyeW, eyeB } from './core.js';
+import { scene, lam, bas, sphereG, eyeW, eyeB, canvasTex } from './core.js';
 
 /* ---------- Karts und Charaktere ---------- */
 export const carsGroup = new THREE.Group(); scene.add(carsGroup);
@@ -44,50 +44,62 @@ export function makeKart(def, pk) {
   const sph = (mat, x, y, z, sx, sy, sz) => { const m = add(sphereG, mat, x, y, z); m.scale.set(sx, sy, sz); return m; };
   const cyl = (r, len, mat, x, y, z, rx, ry, rz) => add(new THREE.CylinderGeometry(r, r, len, 8), mat, x, y, z, rx, ry, rz);
   let R = 3.6, wx = 8.5, wz = 7.4, hull;      /* hull = {L,H,W,y} für Muster */
+  /* Gemeinsamer Kart-Unterbau: Bodenwanne, Seitenrohre und -kästen, Stoßstangen, Sitz mit Lehne, Lenkrad, Motor, Überrollbügel */
+  const base = o => {
+    const px = o.px || 0;
+    add(sup(o.L, 1.8, o.W, 5), dark(), px, o.floor, 0);
+    for (const s of [-1, 1]) {
+      cyl(0.7, o.L - 4, chromeM, px, o.floor + 1.2, s * (o.W / 2 - 0.2), 0, 0, Math.PI / 2);
+      add(sup(o.pod[0], o.pod[1], o.pod[2], 2.6), paint, o.pod[3], o.floor + 2.6, s * (o.W / 2 + 0.2));
+    }
+    for (const bx of [o.fb, o.rb]) if (bx) {
+      cyl(0.8, o.bw, chromeM, bx, o.floor + 1.8, 0, Math.PI / 2, 0, 0);
+      for (const s of [-1, 1]) cyl(0.6, 4, chromeM, bx - Math.sign(bx) * 2, o.floor + 1.8, s * (o.bw / 2 - 1), 0, 0, Math.PI / 2);
+    }
+    add(sup(7.4, 3.4, 9.6, 3), seatM, -3.6, o.floor + 3.6, 0);
+    add(sup(2.8, 8, 10.4, 3), paint, -8.6, o.floor + 7, 0, 0, 0, 0.14);
+    add(new THREE.TorusGeometry(5.8, 0.45, 6, 14, Math.PI), chromeM, -11.4, o.floor + 3.2, 0, 0, Math.PI / 2, 0);
+    cyl(0.5, 5.4, dark(), 7.6, o.floor + 4.8, 0, 0, 0, 0.47);
+    const wh = new THREE.Group(); wh.position.set(6.2, o.floor + 8.6, 0); wh.rotation.z = -0.6; body.add(wh);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.6, 6, 14), dark()); ring.rotation.y = -Math.PI / 2; wh.add(ring);
+    const hubB = new THREE.Mesh(sphereG, acc); hubB.scale.set(0.9, 0.9, 0.9); wh.add(hubB);
+    add(sup(6.4, 5.6, 8.6, 2.4), dark(), o.eng, o.floor + 4.2, 0);
+    add(sup(5.8, 3.8, 8, 2.4), paint, o.eng - 0.2, o.floor + 6.8, 0);
+    add(sup(2, 4.6, 9.4, 2.6), paint, o.rb + 2.2, o.floor + 3.2, 0);
+    for (const s of [-1, 1]) cyl(0.9, 5, chromeM, o.eng - 4.4, o.floor + 3.4, s * 3.2, 0, 0, Math.PI / 2);
+  };
   if (def.id === 'blitz') {
-    hull = { L: 28, H: 7, W: 13.4, y: 6.2 };
-    add(sup(28, 7, 13.4, 2.6), paint, 0, 6.2, 0);
-    add(sup(11, 5, 11, 2.4), paint, 10.5, 5.2, 0);
-    add(sup(10, 7, 12.6, 2.4), paint, -10, 6.8, 0);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(sup(9, 4, 3.8, 2.4), paint, sx * 8.5, 6.4, sz * 7.5);
-    add(sup(7, 5, 9, 3), seatM, -4, 8.4, 0);
-    add(new THREE.BoxGeometry(0.8, 4, 10.5), glassM, 5.2, 11.4, 0, 0, 0, -0.75);
-    add(sup(4, 0.9, 15, 3), dark(), 15.5, 2.6, 0);
-    add(sup(5.4, 1.1, 16, 3), acc, -13.5, 14.2, 0);
-    for (const s of [-1, 1]) { cyl(0.6, 6, dark(), -12.5, 11, s * 5.2); sph(lightM, 14.6, 6.4, s * 3.8, 1.3, 1.3, 1.9); sph(tailM, -14.6, 7, s * 4.6, 0.9, 1.1, 2.2); cyl(1.1, 3, chromeM, -14, 3.8, s * 2.4, 0, 0, Math.PI / 2); }
+    hull = { x: 8, L: 18, H: 4.6, W: 9.6, y: 5.4 };
+    base({ L: 30, W: 10.4, floor: 3.4, pod: [9, 3.4, 3.8, 0], fb: 0, rb: -17.6, bw: 12, eng: -13.6 });
+    add(sup(18, 4.6, 9.6, 2.6), paint, 8, 5.4, 0);
+    add(sup(10, 3.4, 6.4, 2.2), paint, 15, 4.6, 0);
+    add(sup(4, 0.9, 16, 3), dark(), 18.4, 2.4, 0);
+    for (const s of [-1, 1]) { add(sup(1.2, 3, 0.8, 2.4), acc, 18.4, 3.6, s * 7.8); sph(lightM, 13.4, 6.4, s * 3, 1.3, 1.1, 1.5); }
+    add(sup(5.4, 1.1, 16, 3), acc, -15.2, 16, 0);
+    for (const s of [-1, 1]) cyl(0.6, 9, dark(), -14.4, 11.6, s * 5.2);
   } else if (def.id === 'brummi') {
     R = 4.8; wx = 9; wz = 7.8;
-    hull = { L: 24, H: 6, W: 13, y: 8.6 };
-    add(sup(27, 3, 12, 6), dark(), 0, 4.6, 0);
-    add(sup(24, 6, 13, 3.2), paint, 0, 8.6, 0);
-    add(sup(10, 4.6, 12.4, 3), paint, 9, 11.2, 0);
-    add(sup(9, 5, 12.6, 3.4), paint, -10, 12.4, 0);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(sup(10.4, 2.6, 4.2, 3), acc, sx * 9, 10.2, sz * 7.8);
-    add(sup(7, 5, 9, 3), seatM, -4, 9.6, 0);
-    add(new THREE.BoxGeometry(0.8, 5.5, 11.4), glassM, 5, 15, 0, 0, 0, -0.25);
-    for (const s of [-1, 1]) { cyl(0.6, 10, chromeM, -7, 14, s * 5.8); cyl(0.6, 10, chromeM, 14.6, 9, s * 4.8); sph(lightM, 14, 11.6, s * 4.4, 1.8, 1.8, 1.8); }
-    cyl(0.6, 12, chromeM, -7, 18.8, 0, Math.PI / 2, 0, 0);
-    cyl(0.7, 12, chromeM, 15.6, 8, 0, Math.PI / 2, 0, 0);
-    const sp = add(new THREE.TorusGeometry(3, 1.4, 8, 16), tireM, -15.6, 11, 0, 0, Math.PI / 2, 0); sp.userData.k = 1;
-    cyl(1.7, 1.2, acc, -16.4, 11, 0, 0, 0, Math.PI / 2);
+    hull = { x: 8.5, L: 16, H: 6, W: 12.4, y: 8 };
+    base({ L: 31, W: 12.6, floor: 4.8, pod: [10, 4.2, 4.4, 0], fb: 18, rb: -19, bw: 15, eng: -14.4 });
+    add(sup(16, 6, 12.4, 3), paint, 8.5, 8, 0);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(sup(10.4, 2.6, 4.2, 3), acc, sx * 9, 11.6, sz * 7.8);
+    for (const s of [-1, 1]) { cyl(0.8, 8, chromeM, 18, 8.4, s * 5.6); sph(lightM, 16.6, 10.2, s * 4.4, 1.8, 1.8, 1.8); cyl(0.6, 12, chromeM, -11.8, 14, s * 5.6); }
+    cyl(0.8, 11.6, chromeM, -11.8, 20, 0, Math.PI / 2, 0, 0);
+    const sp = add(new THREE.TorusGeometry(3, 1.4, 8, 16), tireM, -20.6, 11, 0, 0, Math.PI / 2, 0); sp.userData.k = 1;
+    cyl(1.7, 1.2, acc, -21.4, 11, 0, 0, 0, Math.PI / 2);
   } else {
     R = 3.4; wx = 8; wz = 7;
-    hull = { L: 22, H: 10, W: 13, y: 8 };
-    add(sup(22, 10, 13, 2), paint, 0, 8, 0);
-    add(sup(10, 5.4, 11.4, 2), paint, 8, 7.4, 0);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(sup(7.6, 4.6, 3.8, 2), paint, sx * 8, 6.8, sz * 7.2);
-    add(sup(6, 5, 8, 3), seatM, -4, 9, 0);
-    add(sup(13, 9, 12, 2), glassM, -3, 14, 0);
-    add(sup(5, 5, 8, 2), acc, -11, 8.4, 0);
-    add(sup(2.4, 2.2, 12.6, 3), chromeM, 12.8, 4.4, 0);
-    cyl(0.3, 7, chromeM, -9, 18, 0); sph(acc, -9, 21.6, 0, 1.4, 1.4, 1.4);
-    for (const s of [-1, 1]) { sph(chromeM, 11.4, 8.8, s * 4.2, 2.3, 2.3, 2.3); sph(lightM, 12.6, 8.8, s * 4.2, 1.5, 1.5, 1.5); sph(tailM, -13.4, 7.4, s * 4, 0.9, 1, 1.6); }
+    hull = { x: 7.6, L: 14, H: 6.4, W: 10.4, y: 6.8 };
+    base({ L: 26, W: 10.6, floor: 3.2, pod: [8, 3.4, 3.6, 0], fb: 15.4, rb: -14.8, bw: 12, eng: -11.8 });
+    add(sup(14, 6.4, 10.4, 2), paint, 7.6, 6.8, 0);
+    for (const s of [-1, 1]) { sph(chromeM, 11.6, 8.8, s * 4.2, 2.3, 2.3, 2.3); sph(lightM, 12.8, 8.8, s * 4.2, 1.5, 1.5, 1.5); }
+    cyl(0.3, 7, chromeM, -11.4, 16.6, 0); sph(acc, -11.4, 20.4, 0, 1.4, 1.4, 1.4);
   }
   /* Muster */
-  const hy = hull.y, hh = hull.H;
-  if (pat === 'stripe') for (const s of [-1, 1]) sph(acc, 0, hy, s * 1.6, hull.L * 0.46, hh * 0.54, 1.0);
-  else if (pat === 'sides') for (const s of [-1, 1]) sph(acc, 0, hy - hh * 0.05, s * (hull.W / 2 - 0.35), hull.L * 0.38, hh * 0.15, 1.1);
-  else for (const dx of [-0.28, 0, 0.28]) sph(acc, hull.L * dx, hy + hh * 0.5, 0, 1.9, 0.5, 1.9);
+  const hy = hull.y, hh = hull.H, hx0 = hull.x || 0;
+  if (pat === 'stripe') for (const s of [-1, 1]) sph(acc, hx0, hy, s * 1.6, hull.L * 0.46, hh * 0.54, 1.0);
+  else if (pat === 'sides') for (const s of [-1, 1]) sph(acc, hx0, hy - hh * 0.05, s * (hull.W / 2 - 0.35), hull.L * 0.38, hh * 0.15, 1.1);
+  else for (const dx of [-0.28, 0, 0.28]) sph(acc, hx0 + hull.L * dx, hy + hh * 0.5, 0, 1.9, 0.5, 1.9);
   /* Räder */
   const wheels = [], front = [], wg = wheelGeos(R);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -119,6 +131,20 @@ export function makeKart(def, pk) {
 }
 export const darkM = lam(0x1b1e27), dark = () => darkM;
 
+/* Rundes Mützen-Abzeichen mit großem Buchstaben, dir 1 = vorn, -1 = hinten (damit man es im Rennen von hinten liest); tilt = Neigung der Mützenwölbung */
+const badgeCache = {};
+function badge(letter, col, r, x, y, tilt, dir) {
+  const key = letter + col;
+  const tex = badgeCache[key] || (badgeCache[key] = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(64, 64, 62, 0, TAU); g.fill();
+    g.fillStyle = '#' + ('000000' + col.toString(16)).slice(-6); g.font = '900 104px "Arial Black", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(letter, 64, 70);
+  }));
+  const grp = new THREE.Group(); grp.position.set(x * dir, y, 0); grp.rotation.z = tilt * dir;
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 24), bas(0xffffff, { map: tex, transparent: true })); m.rotation.y = dir * Math.PI / 2; grp.add(m);
+  return grp;
+}
+
 export function makeDriver(ch, k) {
   const SK = CHAR_SKINS[ch.id][k || 0], C1 = SK[1], C2 = SK[2];
   const g = new THREE.Group();
@@ -126,43 +152,66 @@ export function makeDriver(ch, k) {
   const S = sphereG;
   const eye = (x, y, z, r) => { add(S, eyeW, x, y, z, r); add(S, eyeB, x + r * 0.55, y, z, r * 0.55); };
   const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-  const cone = (r, h, n) => new THREE.ConeGeometry(r, h, n || 8);
-  add(S, lam(SK[3]), -1.5, -8, 0, 5.6, 4.8, 5.8);
+    add(S, lam(SK[3]), -1.5, -8, 0, 5.6, 4.8, 5.8);
+  const dome = (a, b) => new THREE.SphereGeometry(1, 18, 10, 0, TAU, 0, a === undefined ? Math.PI / 2 : a);
+  const skin = lam(0xf2c6a0), nose = lam(0xe8a07c);
   if (ch.id === 'quaki') {
-    const gr = lam(C1);
+    /* Frosch mit Hut und L */
+    const gr = lam(C1), hat = lam(C2);
     add(S, gr, 0, 0, 0, 7.4, 6, 7);
-    for (const s of [-1, 1]) { add(S, gr, 1.6, 5.2, s * 3.6, 3); eye(3.4, 6.2, s * 3.6, 2.2); }
-    add(box(0.8, 0.9, 8), lam(C2), 6.9, -1.6, 0);
-  } else if (ch.id === 'pip') {
-    add(S, lam(C1), 0, 0, 0, 6.8, 6.6, 6.6);
-    add(S, lam(0xffffff), 2.4, -0.6, 0, 5.2, 5.2, 5.4);
-    const beak = add(cone(1.9, 4.2, 6), lam(C2), 7.4, -0.6, 0); beak.rotation.z = -Math.PI / 2;
-    eye(4.6, 2, 2.4, 1.5); eye(4.6, 2, -2.4, 1.5);
-  } else if (ch.id === 'bolzen') {
-    add(box(12, 10, 11.5), lam(C1), 0, 0, 0);
-    add(box(0.9, 4.4, 9.6), bas(C2), 6.1, 0.8, 0);
-    add(new THREE.CylinderGeometry(0.5, 0.5, 4, 6), lam(0x6b7a99), 0, 7, 0);
-    add(S, bas(0xff4b3e), 0, 9.4, 0, 1.6);
-    for (const s of [-1, 1]) { const b = add(new THREE.CylinderGeometry(1.6, 1.6, 2.4, 8), lam(0x6b7a99), 0, 0, s * 6.6); b.rotation.x = Math.PI / 2; }
-  } else if (ch.id === 'mausi') {
-    const o = lam(C1);
-    add(S, o, 0, 0, 0, 7, 6, 6.8);
-    for (const s of [-1, 1]) { const e = add(cone(2.6, 5.2, 4), o, -1, 6.4, s * 3.8); e.rotation.x = -s * 0.25; }
-    add(S, lam(0xffffff), 5.4, -1.8, 0, 2.8, 2.2, 3.6);
-    add(S, lam(C2), 7.6, -0.8, 0, 0.9);
-    eye(5, 2, 2.6, 1.5); eye(5, 2, -2.6, 1.5);
-    for (const s of [-1, 1]) for (const dy of [-0.8, 0.8]) { const w = add(box(5, 0.25, 0.25), lam(0xffffff), 6.2, -1.6 + dy, s * 5.2); w.rotation.y = s * 0.5; }
-  } else if (ch.id === 'broesel') {
-    add(S, lam(C1), 0, 0, 0, 7.2, 6.6, 7);
-    add(S, lam(C2), 6, -1.6, 0, 3.4, 3, 3.8);
-    for (const s of [-1, 1]) add(S, lam(C2), -0.5, 1.5, s * 7.4, 2.2, 3.8, 1.3);
-    add(box(1.4, 0.6, 2), lam(0xff7aa8), 7.4, -4.6, 0);
-    eye(5, 2.8, 2.8, 1.8); eye(5, 2.8, -2.8, 1.8);
+    for (const s of [-1, 1]) { add(S, gr, 1.2, 4.2, s * 5.8, 3); eye(3.2, 5.2, s * 5.8, 2.2); }
+    add(box(0.8, 0.9, 8), lam(0x14301b), 6.9, -1.6, 0);
+    add(dome(), hat, 0, 5.8, 0, 5.4, 4.6, 5.6);
+    add(S, hat, 4.8, 6.2, 0, 3.8, 0.6, 5.2);
+    for (const d of [1, -1]) g.add(badge('L', C2, 3.4, 5.0, 8.1, 0.6, d));
+  } else if (ch.id === 'tom') {
+    /* Tom: humanoide Tomate mit Mütze, grünem Stiel und T */
+    const red = lam(C1), cap = lam(C2), leaf = lam(0x3aa655);
+    add(S, red, 0, 0, 0, 7.2, 6.8, 7.2);
+    for (const s of [-1, 1]) eye(5.8, 1.2, s * 2.7, 1.7);
+    add(S, lam(0x7a1620), 6.6, -2.6, 0, 0.8, 0.6, 2.2);
+    add(dome(), cap, 0, 3.4, 0, 6.8, 4.4, 6.9);
+    add(S, cap, 6.6, 3.6, 0, 4, 0.55, 5.2);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; add(S, leaf, Math.cos(a) * 2.1, 7.7, Math.sin(a) * 2.1, 2.4, 0.5, 1.2).rotation.y = -a; }
+    add(new THREE.CylinderGeometry(0.9, 1.1, 4.2, 8), lam(0x2f8f3a), 0, 9.8, 0);
+    for (const d of [1, -1]) g.add(badge('T', C2, 3.3, 6.2, 5.6, 0.7, d));
+  } else if (ch.id === 'anna') {
+    /* Anna: blond, langer Pferdeschwanz */
+    const hair = lam(C1);
+    add(S, skin, 0, 0, 0, 6.5, 6.4, 6.3);
+    add(S, hair, -1.4, 1.1, 0, 7.2, 7, 7.3);
+    add(S, hair, 2.8, 5.2, 0, 4.4, 2.4, 6.8);
+    add(S, lam(C2), -7, 2.4, 0, 1.2);
+    add(S, hair, -9.6, 0.6, 0, 3.6, 2.4, 2.4);
+    add(S, hair, -12.6, -1.8, 0, 3.4, 2.2, 2.1);
+    add(S, hair, -15.2, -4.4, 0, 2.6, 1.9, 1.8);
+    for (const s of [-1, 1]) { eye(5.6, 1, s * 2.5, 1.5); add(S, lam(0xff9fb4), 5.4, -1.8, s * 4.2, 1.1, 0.8, 0.8); }
+    add(S, nose, 6.4, -0.8, 0, 0.9);
+    add(box(0.8, 0.5, 3.2), lam(0xd0485a), 6, -3, 0);
+  } else if (ch.id === 'flavio') {
+    /* Flavio: Schnauzer und Schirmmütze */
+    const cap = lam(C1);
+    add(S, skin, 0, 0, 0, 6.7, 6.4, 6.4);
+    add(dome(), cap, 0, 2.2, 0, 7.2, 5.4, 7.2);
+    add(S, cap, 6.8, 2.5, 0, 4.4, 0.6, 5.4);
+    for (const d of [1, -1]) g.add(badge('F', C1, 3.3, 6.5, 5.2, 0.68, d));
+    add(S, nose, 7.2, -0.7, 0, 1.9);
+    for (const s of [-1, 1]) { eye(5.8, 1.7, s * 2.4, 1.5); const m = add(S, lam(C2), 6.6, -2.6, s * 2.1, 1.6, 1.1, 2.6); m.rotation.x = -s * 0.25; }
+    add(S, lam(C2), 6.9, -2, 0, 1.2, 1, 1.2);
+  } else if (ch.id === 'janos') {
+    /* Janos: Tigerente mit Mütze und J */
+    const yel = lam(C1), blk = lam(0x1d1d1d), cap = lam(C2);
+    add(S, yel, 0, 0, 0, 6.9, 6.4, 6.6);
+    for (const d of [-4.2, -1.6, 1.0]) { const q = Math.sqrt(1 - (d / 6.9) * (d / 6.9)); add(S, blk, d, 0, 0, 0.45, 6.4 * q + 0.25, 6.6 * q + 0.25); }
+    for (const s of [-1, 1]) eye(5.4, 1.2, s * 2.7, 1.9);
+    add(S, lam(0xff8a1f), 8.2, -1.6, 0, 3.8, 1.3, 3.4);
+    add(S, lam(0xe0701a), 7.4, -2.9, 0, 3, 0.8, 2.6);
+    add(dome(), cap, 0, 2.8, 0, 7.2, 5.2, 7.2);
+    add(S, cap, 7, 2.9, 0, 4.4, 0.6, 5.4);
+    for (const d of [1, -1]) g.add(badge('J', C2, 3.3, 6.5, 5.5, 0.68, d));
+    add(S, yel, -7, 0.4, 0, 2.2, 1.6, 2.6);
   } else {
     add(S, lam(C1), 0, 0, 0, 7.2);
-    add(S, eyeW, 5.4, 1.2, 0, 3.8); add(S, eyeB, 8.6, 1.2, 0, 1.9);
-    for (const s of [-1, 1]) { const h = add(cone(1.6, 5, 6), lam(C2), 0, 7, s * 3.4); h.rotation.x = -s * 0.35; }
-    add(box(0.8, 0.8, 7), lam(0x2b1760), 7, -3, 0);
   }
   g.position.set(-3, 16, 0);
   return g;
