@@ -53,7 +53,8 @@ const TRACKS = [
     f: t => 1 + 0.2 * Math.sin(4 * t + 0.3) + 0.1 * Math.cos(3 * t) + 0.04 * Math.sin(6 * t + 2),
     loop: true, sky: ['#25b2e8', '#d6f4ff'], top: '#f1d28a', cliff: ['#c99a52', '#dcb06a'], curb: [0x2fa8e0, 0xffffff], decor: 'water', puddle: 'water', walker: 'duck', sun: 0xfff4d8 }
 ];
-const BOTS = [{ name: 'Rex', skill: 0.88 }, { name: 'Mimi', skill: 0.92 }, { name: 'Olli', skill: 0.95 }];
+const BOTS = [{ name: 'Rex' }, { name: 'Mimi' }, { name: 'Olli' }, { name: 'Lotte' }, { name: 'Pepe' }, { name: 'Zora' }, { name: 'Bruno' }];
+const DIFF_SKILL = [0.8, 0.9, 0.98];
 const ITEMS = {
   banana: { name: 'Banane', svg: '<path d="M9 28c3 11 20 15 31 4 2-2 1-5-2-4-9 6-17 2-21-8-1-3-9-2-8 8z" fill="#ffd23f" stroke="#8a6b00" stroke-width="2.2" stroke-linejoin="round"/><circle cx="11" cy="22" r="2.4" fill="#6b4a00"/>' },
   shield: { name: 'Schild', svg: '<circle cx="24" cy="24" r="16" fill="rgba(79,216,255,.35)" stroke="#4fd8ff" stroke-width="3"/><path d="M15 20a11 11 0 0 1 8-7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>' },
@@ -72,4 +73,4 @@ const ITEM_W = [
   { banana: 4, shield: 8, mushroom: 22, rocket: 18, bolt: 14, feather: 6, iceball: 8, ink: 8, magnet: 12 }
 ];
 
-export { LAPS, ROAD_HALF, CURB, EDGE, RAMP_H, G, GAPLEN, KARTS, CHARS, MOD_NAMES, FACES, hx, CHAR_SKINS, KART_SKINS, faceSvg, TRACKS, BOTS, ITEMS, ITEM_W };
+export { LAPS, ROAD_HALF, CURB, EDGE, RAMP_H, G, GAPLEN, KARTS, CHARS, MOD_NAMES, FACES, hx, CHAR_SKINS, KART_SKINS, faceSvg, TRACKS, BOTS, DIFF_SKILL, ITEMS, ITEM_W };

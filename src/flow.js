@@ -8,32 +8,44 @@ import { sorted, stepCar, collide } from './physics.js';
 import { mp, mpBuildCars, mpSend, mpRemote } from './multiplayer.js';
 import { banner } from './input.js';
 import { renderMenu } from './menu.js';
+import { grantRewards } from './save.js';
+import { prepareRewards, hideRewards } from './rewards.js';
 
 /* ---------- Spielfluss ---------- */
-export function resetBoxes() { for (const b of S.world.boxes) { b.t = 0; b.mesh.visible = true; } }
+export function resetBoxes() {
+  /* Im Zeitrennen gibt es keine Item-Würfel */
+  const off = S.mode === 'trial' && !mp.active;
+  for (const b of S.world.boxes) { b.t = off ? 1e9 : 0; b.mesh.visible = !off; }
+}
+const hudOff = () => { $('#hud').hidden = true; $('#ctl').hidden = true; $('#speed').hidden = true; $('#wrong').hidden = true; $('#app').classList.remove('split'); };
 export function startRace() {
   if (mp.pending) { const pen = mp.pending; mp.pending = null; mpBuildCars(pen); } else { mp.active = false; resetRace(); }
   resetBoxes();
   S.state = 'count'; S.countT = 3.6; S.lastCount = -1;
-  $('#menu').hidden = true; $('#over').hidden = true;
-  $('#hud').hidden = false; $('#ctl').hidden = false; $('#speed').hidden = false;
+  $('#menu').hidden = true; $('#over').hidden = true; hideRewards();
+  const split = S.humans.length > 1;
+  $('#app').classList.toggle('split', split);
+  $('#hud').hidden = false; $('#ctl').hidden = split; $('#speed').hidden = split;
   btn.L = btn.R = btn.drift = false;
 }
 export function toMenu() {
-  S.state = 'menu'; $('#over').hidden = true; $('#menu').hidden = false;
-  $('#hud').hidden = true; $('#ctl').hidden = true; $('#speed').hidden = true; $('#wrong').hidden = true;
-  mp.active = false; resetRace(); resetBoxes(); renderMenu();
+  S.state = 'menu'; $('#over').hidden = true; hideRewards(); $('#menu').hidden = false; hudOff();
+  mp.active = false; S.views = null; renderMenu(true); resetBoxes();
 }
 export function showResults() {
-  const order = sorted(), place = order.indexOf(S.player) + 1;
-  $('#overTitle').textContent = 'Platz ' + place;
-  $('#results').innerHTML = order.map((c, i) => '<li class="' + (c === S.player ? 'me' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + c.ch.name + '<small>' + c.name + ' · ' + c.kart.name + '</small></span><span class="tm">' + (c.finished ? fmt(c.finishT) : c.left ? 'ausgestiegen' : 'unterwegs') + '</span></li>').join('');
+  const order = sorted(), place = order.indexOf(S.player) + 1, multi = S.humans.length > 1, trial = S.mode === 'trial';
+  $('#overKick').textContent = trial ? 'Zeitrennen' : 'Zieleinlauf';
+  $('#overTitle').textContent = trial ? fmt(S.player.finishT) : multi ? order[0].name + ' gewinnt' : 'Platz ' + place;
+  $('#results').innerHTML = order.map((c, i) => '<li class="' + (c.isPlayer ? 'me' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + c.ch.name + '<small>' + c.name + ' · ' + c.kart.name + '</small></span><span class="tm">' + (c.finished ? fmt(c.finishT) : c.left ? 'ausgestiegen' : 'unterwegs') + '</span></li>').join('');
   $('#rTime').textContent = fmt(S.player.finishT); $('#rLap').textContent = fmt(S.player.bestLap);
-  const key = 'kurvenjaeger-best-' + S.world.def.id, old = lsGet(key);
-  const isBest = place === 1 && (!old || S.player.finishT < old);
+  const key = (trial ? 'kurvenjaeger-tt-' : 'kurvenjaeger-best-') + S.world.def.id, old = lsGet(key);
+  const isBest = (trial || place === 1) && (!old || S.player.finishT < old);
   if (isBest) lsSet(key, S.player.finishT);
   $('#newBest').hidden = !isBest;
-  $('#hud').hidden = true; $('#ctl').hidden = true; $('#speed').hidden = true; $('#wrong').hidden = true;
+  hudOff();
+  /* Belohnungen werden sofort vergeben und gespeichert, auch wenn der Bildschirm später geschlossen wird */
+  const rw = grantRewards({ place, cars: S.cars.length, opponents: S.cars.length - 1, mode: S.mode, trackId: S.world.def.id, isBest, driftN: S.player.driftN | 0, diff: S.cfg.diff });
+  prepareRewards(rw, { place, multi, trial, time: S.player.finishT });
   $('#over').hidden = false; S.state = 'over';
 }
 

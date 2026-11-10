@@ -1,4 +1,4 @@
-import { KARTS, CHARS, BOTS } from './data.js';
+import { KARTS, CHARS, BOTS, DIFF_SKILL } from './data.js';
 import { S } from './state.js';
 import { N, rand, wrapIdx } from './util.js';
 import { carsGroup, bananas, rockets, makeCarMesh } from './karts.js';
@@ -18,23 +18,32 @@ export function placeCar(c, slot) {
     item: null, roll: 0, pending: null, itemT: 0, shield: 0, spin: 0, spinAng: 0, inv: 0, slow: 0, drift: 0, air: false, fall: false, safe: i, rank: slot, onPlat: true, chute: false, chuteT: 0, vTerm: 60, hop: false, feather: false, rollAng: 0, freeze: 0, ink: 0, jumpCd: 0, loop: null, pitch: 0 });
 }
 export const rnd3 = () => Math.floor(Math.random() * 3);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+/* Baut das Starterfeld aus der Menü-Auswahl: S.mode = local | trial (Mehrspieler baut mpBuildCars) */
 export function resetRace() {
   for (const c of S.cars) carsGroup.remove(c.mesh);
   for (const b of bananas) { b.life = 0; b.m.visible = false; }
   for (const r of rockets) { r.life = 0; r.m.visible = false; r.iceM.visible = false; }
-  S.cars = []; S.gridN = 4;
-  const others = KARTS.filter((_, i) => i !== S.selKart), chOthers = CHARS.filter((_, i) => i !== S.selChar).sort(() => Math.random() - 0.5);
-  const list = [
-    { name: BOTS[0].name, skill: BOTS[0].skill, kart: others[0], ch: chOthers[0], isPlayer: false, sk: rnd3(), pk: rnd3() },
-    { name: BOTS[1].name, skill: BOTS[1].skill, kart: others[1], ch: chOthers[1], isPlayer: false, sk: rnd3(), pk: rnd3() },
-    { name: 'Du', skill: 1, kart: KARTS[S.selKart], ch: CHARS[S.selChar], isPlayer: true, sk: S.selSkin, pk: S.selPaint },
-    { name: BOTS[2].name, skill: BOTS[2].skill, kart: others[0], ch: chOthers[2], isPlayer: false, sk: rnd3(), pk: (rnd3() + 1) % 3 }
-  ];
+  S.cars = []; S.humans = [];
+  const nh = S.mode === 'local' ? S.cfg.humans : 1, nb = S.mode === 'trial' ? 0 : S.mode === 'local' ? S.cfg.bots : 3;
+  const list = [];
+  for (let i = 0; i < nh; i++) {
+    const h = S.hp[i];
+    list.push({ name: nh > 1 ? 'Spieler ' + (i + 1) : 'Du', skill: 1, kart: KARTS[h.kt], ch: CHARS[h.ch], isPlayer: true, pi: i, sk: h.sk, pk: h.pk });
+  }
+  const base = DIFF_SKILL[S.cfg.diff] === undefined ? 0.9 : DIFF_SKILL[S.cfg.diff], names = shuffle(BOTS.slice());
+  for (let i = 0; i < nb; i++) {
+    const kt = KARTS[Math.floor(Math.random() * KARTS.length)], ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+    list.push({ name: names[i % names.length].name, skill: Math.min(1, base + (Math.random() - 0.5) * 0.05), kart: kt, ch, isPlayer: false, sk: rnd3(), pk: rnd3() });
+  }
+  shuffle(list);
+  S.gridN = list.length;
   list.forEach((o, slot) => {
-    const c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk), slot, st: stats(o.kart, o.ch) }, o);
+    const c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk), slot, st: stats(o.kart, o.ch), driftN: 0 }, o);
     placeCar(c, slot); S.cars.push(c); carsGroup.add(c.mesh);
-    if (c.isPlayer) S.player = c;
+    if (c.isPlayer) S.humans.push(c);
   });
+  S.humans.sort((a, b) => a.pi - b.pi); S.player = S.humans[0];
   S.raceT = 0; S.finishWait = 0;
 }
 export function locate(c) {

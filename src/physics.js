@@ -1,13 +1,13 @@
 import { ROAD_HALF, CURB, EDGE, LAPS, RAMP_H, G } from './data.js';
 import { S } from './state.js';
-import { clamp, angDiff, N, rand, btn, keys, vib, wrapIdx, TAU } from './util.js';
+import { clamp, angDiff, N, rand, vib, wrapIdx, TAU } from './util.js';
 import { loopPoint, loopLat } from './world.js';
 import { spawnPuff } from './karts.js';
 import { snd } from './deco.js';
 import { locate, respawn } from './cars.js';
 import { giveItem } from './items.js';
 import { aiControl } from './ai.js';
-import { banner } from './input.js';
+import { banner, readInput } from './input.js';
 
 /* ---------- Fahrphysik ---------- */
 /* Looping mit echter Physik: das Auto fährt frei auf der Bahn (Lenken, Bremsen, seitlich abstürzen), die Schwerkraft bremst
@@ -35,10 +35,7 @@ function stepLoop(c, dt) {
   const auto = !c.isPlayer || c.finished;
   let steerT = 0, brake = false;
   if (auto) steerT = clamp(-(l.rel * 0.05 + l.psi * 2), -1, 1);
-  else {
-    steerT = (btn.R || keys['arrowright'] || keys['d'] ? 1 : 0) - (btn.L || keys['arrowleft'] || keys['a'] ? 1 : 0);
-    brake = btn.drift || keys['arrowdown'] || keys['s'] || keys['shift'];
-  }
+  else { const inp = readInput(c); steerT = inp.steer; brake = inp.brake; }
   if (c.freeze > 0) { c.freeze -= dt; steerT = 0; brake = false; c.s = 0; }
   const flip = steerT === 0 || (c.steer !== 0 && Math.sign(steerT) !== Math.sign(c.steer));
   c.steer += clamp(steerT - c.steer, -(flip ? 9 : 5.5) * dt, (flip ? 9 : 5.5) * dt);
@@ -85,10 +82,7 @@ export function stepCar(c, dt) {
   const auto = !c.isPlayer || c.finished;
   let steerT = 0, brake = false;
   if (auto) steerT = aiControl(c, dt);
-  else {
-    steerT = (btn.R || keys['arrowright'] || keys['d'] ? 1 : 0) - (btn.L || keys['arrowleft'] || keys['a'] ? 1 : 0);
-    brake = btn.drift || keys['arrowdown'] || keys['s'] || keys['shift'];
-  }
+  else { const inp = readInput(c); steerT = inp.steer; brake = inp.brake; }
   if (c.spin > 0) { c.spin -= dt; steerT = 0; brake = false; c.spinAng += dt * 11; if (c.spin <= 0) c.spinAng = 0; }
   if (c.freeze > 0) { c.freeze -= dt; steerT = 0; brake = false; c.s = 0; c.vx = 0; c.vz = 0; }
   const flip = steerT === 0 || (c.steer !== 0 && Math.sign(steerT) !== Math.sign(c.steer));
@@ -116,7 +110,7 @@ export function stepCar(c, dt) {
   // Drift-Boost
   if (!auto) {
     if (brake && Math.abs(c.steer) > 0.4 && c.s > 70 && !air) { c.drift += dt; if (Math.random() < dt * 25) spawnPuff(c.x - Math.cos(c.a) * 10, 2, c.z - Math.sin(c.a) * 10, c.drift > 0.8 ? 0xffb347 : 0xe8e8e8, 0.35, 3); }
-    else if (c.drift > 0) { if (c.drift > 0.8) { c.boost = Math.max(c.boost, Math.min(1.5, 0.5 + c.drift * 0.5)); banner('Drift-Boost!', '', 'show'); } c.drift = 0; }
+    else if (c.drift > 0) { if (c.drift > 0.8) { c.boost = Math.max(c.boost, Math.min(1.5, 0.5 + c.drift * 0.5)); c.driftN = (c.driftN | 0) + 1; if (c === S.player) banner('Drift-Boost!', '', 'show'); } c.drift = 0; }
   }
   const sr = clamp(c.s / d.max, -0.3, 1.2);
   const turnRate = d.turn * clamp(Math.abs(c.s) / 40, 0, 1) * (1 - 0.28 * Math.max(0, sr)) * (brake ? 1.25 : 1) * (air ? (c.chute ? 0.75 : 0.3) : 1);
@@ -184,7 +178,8 @@ export function stepCar(c, dt) {
   } else if (lapNow < c.lap) c.lap = Math.max(0, lapNow);
   if (!c.finished && c.prog >= LAPS * N) {
     c.finished = true; c.finishT = S.raceT;
-    if (c === S.player) { S.state = 'finish'; S.finishWait = 2.4; banner('Ziel!', '', 'stay'); }
+    if (c === S.player) banner('Ziel!', '', 'stay');
+    if (c.isPlayer && S.cars.every(o => !o.isPlayer || o.finished)) { S.state = 'finish'; S.finishWait = 2.4; }
   }
 }
 

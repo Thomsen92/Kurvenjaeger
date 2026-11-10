@@ -16,10 +16,27 @@ export const muteB = $('#mute'); export const muteUi = () => { muteB.textContent
 muteB.addEventListener('click', () => { sfx.init(); if (sfx.running() || sfx.muted()) sfx.set(!sfx.muted()); muteUi(); }); muteUi(); setInterval(muteUi, 800);
 hold($('#bL'), 'L'); hold($('#bR'), 'R'); hold($('#bDrift'), 'drift');
 hold($('#bItem'), null, () => { if (S.state === 'race' && S.player) useItem(S.player); });
+/* Tastenbelegung je lokalem Spieler. Spieler 1 darf allein auch mit A/D/S fahren, Touch-Tasten gehören immer Spieler 1. */
+export const KEYMAP = [
+  { L: ['arrowleft'], R: ['arrowright'], B: ['arrowdown', 'shift'], I: [' '], hint: 'Pfeiltasten · Pfeil unten Driften · Leertaste Item' },
+  { L: ['a'], R: ['d'], B: ['s'], I: ['q'], hint: 'A / D lenken · S Driften · Q Item' },
+  { L: ['j'], R: ['l'], B: ['k'], I: ['i'], hint: 'J / L lenken · K Driften · I Item' },
+  { L: ['4'], R: ['6'], B: ['5'], I: ['8'], hint: 'Ziffernblock 4 / 6 lenken · 5 Driften · 8 Item' }
+];
+const down = list => list.some(k => keys[k]);
+export function readInput(c) {
+  const i = c.pi | 0, m = KEYMAP[i], solo = S.humans.length <= 1;
+  const L = down(m.L) || (i === 0 && (btn.L || (solo && keys['a']))), R = down(m.R) || (i === 0 && (btn.R || (solo && keys['d'])));
+  const B = down(m.B) || (i === 0 && (btn.drift || (solo && keys['s'])));
+  return { steer: (R ? 1 : 0) - (L ? 1 : 0), brake: !!B };
+}
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); keys[k] = true;
-  if (k === ' ') { e.preventDefault(); if (S.state === 'race' && S.player) useItem(S.player); }
-  if (k.startsWith('arrow')) e.preventDefault();
+  if (S.state === 'race' && !e.repeat) {
+    S.humans.forEach((h, i) => { if (KEYMAP[i].I.includes(k)) useItem(h); });
+  }
+  if (k === ' ' && S.state !== 'menu') e.preventDefault();
+  if (k.startsWith('arrow') && S.state !== 'menu') e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 app.addEventListener('contextmenu', e => e.preventDefault());

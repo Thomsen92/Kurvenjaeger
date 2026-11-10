@@ -34,45 +34,20 @@
 
   <button id="mute" class="mute" type="button" aria-pressed="true">Ton an</button>
   <div id="menu" class="overlay">
-    <div class="menuIn">
-      <p class="kicker">Himmels-Rennen</p>
-      <h1>Kurven<em>jäger</em></h1>
-      <div class="stage" aria-hidden="true"></div>
-      <div class="sheet">
-        <p class="lead">Drei Runden in einem Themenpark im Himmel. Weiche Kühen, Pfützen und Enten aus, sammle Item-Würfel und spring mit dem Fallschirm über die Abgründe.</p>
-        <h2 class="sec">Charakter</h2>
-        <div id="chars"></div>
-        <p class="charInfo" id="charInfo"></p>
-        <div id="skins" class="skrow"></div>
-        <h2 class="sec">Kart</h2>
-        <div id="cars"></div>
-        <div id="paints" class="skrow"></div>
-        <h2 class="sec">Strecke</h2>
-        <div id="tracks"></div>
-        <h2 class="sec">Mehrspieler</h2>
-        <div id="mp">
-          <div id="mpJoinRow">
-            <input id="mpName" class="txt" maxlength="12" placeholder="Dein Name" aria-label="Dein Name">
-            <div class="row"><input id="mpCode" class="txt" maxlength="6" placeholder="Raum-Code" aria-label="Raum-Code" autocapitalize="characters" autocomplete="off"><button id="mpJoin" class="ghost">Beitreten</button><button id="mpNew" class="ghost">Neuer Raum</button></div>
-          </div>
-          <p class="hint" id="mpStatus"></p>
-          <div id="mpRoom" hidden>
-            <p class="hint">Raum-Code: <b id="mpCodeShow" class="code"></b> Schick den Code an Freunde. Sie öffnen dasselbe Spiel und treten mit dem Code bei (bis zu 8 Fahrer).</p>
-            <ul id="mpList"></ul>
-            <div class="row"><button id="mpGo" class="cta" hidden>Gemeinsam starten</button><button id="mpLeave" class="ghost">Raum verlassen</button></div>
-            <p class="hint" id="mpHint"></p>
-          </div>
-        </div>
-        <button id="startBtn" class="cta">Rennen starten</button>
-        <p class="hint"><b>Pfeile:</b> lenken, das Kart gibt von allein Gas. <b>Item:</b> tippen zum Benutzen. <b>Drift:</b> in der Kurve halten und loslassen für einen Boost. Fahr auf den Rampen mit viel Tempo, sonst stürzt du in den Abgrund. Nach dem Absprung öffnet sich ein Fallschirm: Leichte Figuren und Karts schweben weiter, schwere sinken schneller. Am Computer: Pfeiltasten, Leertaste für das Item, Shift zum Driften.</p>
-        <p class="best" id="bestLine"></p>
-      </div>
-    </div>
+    <div class="mscroll"><div class="menuIn" id="menuIn">
+      <header class="mhead"><p class="kicker" id="mKicker">Himmels-Rennen</p><h1>Kurven<em>jäger</em></h1></header>
+      <div id="page"></div>
+    </div></div>
+    <nav id="nav" aria-label="Menü-Navigation">
+      <button id="navBack" class="ghost" type="button">Zurück</button>
+      <span id="navStep" class="navStep"></span>
+      <button id="navNext" class="cta" type="button">Weiter</button>
+    </nav>
   </div>
 
   <div id="over" class="overlay dim" hidden>
     <div class="menuIn">
-      <p class="kicker">Zieleinlauf</p>
+      <p class="kicker" id="overKick">Zieleinlauf</p>
       <h1 id="overTitle">Platz 1</h1>
       <p class="newbest" id="newBest" hidden>Neue Bestzeit!</p>
       <ol id="results"></ol>
@@ -80,11 +55,35 @@
         <div><small>Deine Zeit</small><b id="rTime">0:00.00</b></div>
         <div><small>Beste Runde</small><b id="rLap">0:00.00</b></div>
       </div>
+      <button id="rwBtn" class="cta" type="button">Belohnungen ansehen</button>
+    </div>
+  </div>
+
+  <div id="reward" class="overlay dim" hidden>
+    <div class="menuIn">
+      <p class="kicker">Belohnungen</p>
+      <h1 id="rwTitle">+0 Punkte</h1>
+      <ul id="rwLines"></ul>
+      <div class="rwTotal"><span>Punkte erhalten</span><b id="rwTotal">0</b></div>
+      <div id="rwStats" class="hint"></div>
+      <div id="rwUnlocks" hidden>
+        <h2 class="sec">Neu freigeschaltet</h2>
+        <div id="rwChips"></div>
+      </div>
+      <div id="rwGoal" class="goal" hidden></div>
       <div class="row">
-        <button id="againBtn" class="cta">Nochmal</button>
-        <button id="changeBtn" class="ghost">Zum Menü</button>
+        <button id="againBtn" class="cta" type="button">Nochmal</button>
+        <button id="changeBtn" class="ghost" type="button">Zum Menü</button>
       </div>
     </div>
+  </div>
+
+  <div id="unlock" class="overlay unl" hidden>
+    <div class="unStage" id="unStage"></div>
+    <div class="rays" aria-hidden="true"></div>
+    <div id="confetti" aria-hidden="true"></div>
+    <div class="unTop"><p class="kicker" id="unKind">Neu freigeschaltet</p><h1 id="unName">Name</h1><p class="unSub" id="unSub"></p></div>
+    <div class="unBot"><span id="unCount"></span><button id="unNext" class="cta" type="button">Weiter</button></div>
   </div>
 </div>
 

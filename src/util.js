@@ -24,6 +24,13 @@ S.selKart = 0;
 S.selTrack = 0;
 S.selSkin = 0;
 S.selPaint = 0;
+S.mode = 'local';
+S.cfg = { humans: 1, bots: 3, diff: 1, mpMax: 4 };
+S.hp = [0, 1, 2, 3].map(i => ({ ch: 0, sk: 0, kt: 0, pk: 0 }));
+S.humans = [];
+S.views = null;
+try { S.name = localStorage.getItem('kj-name') || ''; } catch (e) { S.name = ''; }
+if (!S.name) S.name = 'Fahrer' + Math.floor(10 + Math.random() * 90);
 S.world = null;
 S.cars = [];
 S.player = null;
