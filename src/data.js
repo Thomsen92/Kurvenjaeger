@@ -43,15 +43,18 @@ function faceSvg(id, k) {
   return t;
 }
 const TRACKS = [
-  { id: 'muhland', name: 'Muh-Farm', info: 'Feldweg, Kühe, Schlammpfützen', R: 830, gaps: 3,
+  { id: 'muhland', name: 'Muh-Farm', info: 'Feldweg, Hämmer, Kisten, Falltür', R: 830, gaps: 3,
     f: t => 1 + 0.22 * Math.sin(3 * t) + 0.09 * Math.cos(5 * t + 0.5) + 0.05 * Math.sin(8 * t + 1),
-    sky: ['#3f9bea', '#d8efff'], top: '#6ab04c', cliff: ['#7a5538', '#94693f'], curb: [0xe0b84e, 0x9b6b2b], decor: 'farm', puddle: 'mud', walker: 'cow', sun: 0xfff1d6 },
-  { id: 'zuckerland', name: 'Zuckerland', info: 'Keks-Straße, Sirup, Gummibärchen', R: 890, gaps: 4,
+    sky: ['#3f9bea', '#d8efff'], top: '#6ab04c', cliff: ['#7a5538', '#94693f'], curb: [0xe0b84e, 0x9b6b2b], decor: 'farm', puddle: 'mud', walker: 'cow', sun: 0xfff1d6,
+    dyn: ['crates', 'heave', 'hammer', 'creek', 'wall', 'barrier', 'trap', 'slick'] },
+  { id: 'zuckerland', name: 'Zuckerland', info: 'Keks-Straße, Poller, Drehscheibe, Schiebeplattform', R: 890, gaps: 4,
     f: t => 1 + 0.23 * Math.sin(2 * t + 0.8) + 0.07 * Math.cos(4 * t) + 0.02 * Math.sin(7 * t),
-    sky: ['#ff9bd2', '#ffe6f4'], top: '#ffb3d9', sprinkles: true, cliff: ['#5a3324', '#74422f'], curb: [0xff6ad5, 0xffffff], decor: 'candy', puddle: 'syrup', walker: 'gummy', sun: 0xffe0f0 },
-  { id: 'plansch', name: 'Plansch-Park', info: 'Holzsteg, rutschige Pfützen, Enten', R: 860, gaps: 3,
+    sky: ['#ff9bd2', '#ffe6f4'], top: '#ffb3d9', sprinkles: true, cliff: ['#5a3324', '#74422f'], curb: [0xff6ad5, 0xffffff], decor: 'candy', puddle: 'syrup', walker: 'gummy', sun: 0xffe0f0,
+    dyn: ['barrier', 'sweep', 'popup', 'turn', 'crates', 'slider', 'slick', 'hammer'] },
+  { id: 'plansch', name: 'Plansch-Park', info: 'Holzsteg, Falltüren, Poller, Enten', R: 860, gaps: 3,
     f: t => 1 + 0.2 * Math.sin(4 * t + 0.3) + 0.1 * Math.cos(3 * t) + 0.04 * Math.sin(6 * t + 2),
-    loop: true, sky: ['#25b2e8', '#d6f4ff'], top: '#f1d28a', cliff: ['#c99a52', '#dcb06a'], curb: [0x2fa8e0, 0xffffff], decor: 'water', puddle: 'water', walker: 'duck', sun: 0xfff4d8 }
+    loop: true, sky: ['#25b2e8', '#d6f4ff'], top: '#f1d28a', cliff: ['#c99a52', '#dcb06a'], curb: [0x2fa8e0, 0xffffff], decor: 'water', puddle: 'water', walker: 'duck', sun: 0xfff4d8,
+    dyn: ['popup', 'wall', 'trap', 'creek', 'turn', 'sweep', 'crates', 'slick'] }
 ];
 const BOTS = [{ name: 'Rex' }, { name: 'Mimi' }, { name: 'Olli' }, { name: 'Lotte' }, { name: 'Pepe' }, { name: 'Zora' }, { name: 'Bruno' }];
 const DIFF_SKILL = [0.8, 0.9, 0.98];

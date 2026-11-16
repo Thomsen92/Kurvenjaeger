@@ -197,7 +197,7 @@ export function buildPuddles(def, group, pts) {
   const info = PUDDLE[def.puddle];
   for (let k = 0; k < 24; k++) {
     let i = Math.floor((k + 0.5) * N / 24 + R(-14, 14)); i = (i + N) % N;
-    if (S.world.near[i] || i < 36 || i > N - 20) continue;
+    if (S.world.avoid[i] || i < 36 || i > N - 20) continue;
     const p = pts[i], lat = R(-44, 44), r = R(14, 22);
     const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: info.color, transparent: true, opacity: info.opacity, emissive: def.puddle === 'syrup' ? 0x551133 : 0x000000 }));
     m.rotation.x = -Math.PI / 2; m.position.set(p.x + p.nx * lat, 0.45, p.z + p.nz * lat); m.scale.set(r, r * 0.7, 1); m.rotation.z = p.ang;
@@ -244,7 +244,7 @@ export function buildWalkers(def, group, pts) {
   const list = [];
   for (let k = 0; k < 7; k++) {
     let i = Math.floor((k + 0.35) * N / 7 + R(-20, 20)); i = (i + N) % N;
-    let tries = 0; while ((S.world.near[i] || i < 40) && tries++ < 60) i = (i + 9) % N;
+    let tries = 0; while ((S.world.avoid[i] || i < 40) && tries++ < 60) i = (i + 9) % N;
     const mesh = makeWalker(def.walker); group.add(mesh);
     list.push({ idx: i, lat: R(-96, 96), dir: Math.random() < 0.5 ? -1 : 1, speed: def.walker === 'cow' ? 20 : 26, pause: 0, mesh, x: 0, z: 0, t: R(0, 6), r: def.walker === 'cow' ? 19 : 15 });
   }

@@ -1,6 +1,7 @@
 import { S } from './state.js';
 import { N, clamp, angDiff, rand, wrapIdx } from './util.js';
 import { useItem } from './items.js';
+import { dynAi } from './dynamic.js';
 
 /* ---------- KI ---------- */
 export function aiItem(c, dt) {
@@ -25,11 +26,14 @@ export function aiControl(c, dt) {
   const L = S.world.loop, inLoop = L && wrapIdx(c.idx - L.i0) > -44 && wrapIdx(c.idx - L.i0) < L.m + 6;
   if (nearGap) c.lane += ((inLoop ? L.lc : 0) - c.lane) * Math.min(1, dt * 3);
   else { c.laneT -= dt; if (c.laneT <= 0) { c.lane = rand(-34, 34); c.laneT = rand(2, 5); } }
+  const ad = dynAi(c, dt);
+  if (ad.lane !== null) c.lane += (ad.lane - c.lane) * Math.min(1, dt * 6);
   const tx = tp.x + tp.nx * c.lane, tz = tp.z + tp.nz * c.lane;
   const want = Math.atan2(tz - c.z, tx - c.x);
   const ahead = Math.max(S.world.turn[c.idx], S.world.turn[(c.idx + 15) % N], S.world.turn[(c.idx + 30) % N]);
   let mul = clamp(1 - ahead * 0.42, 0.6, 1) * c.skill;
   if (nearGap) mul = Math.max(mul, 0.97);
+  mul = Math.min(mul, ad.mul);
   for (const w of S.world.walkers) { const di = wrapIdx(w.idx - c.idx); if (di > 1 && di < 24 && Math.abs(w.lat - c.lat) < 32 + (w.pause <= 0 ? 10 : 0)) mul = Math.min(mul, 0.5); }
   if (!c.isPlayer && S.player) { const d = S.player.prog - c.prog; mul *= d > 90 ? 1.07 : d < -90 ? 0.93 : 1; }
   if (c.ink > 0) mul *= 0.88;

@@ -7,6 +7,7 @@ import { stats, placeCar, resetRace, locate } from './cars.js';
 import { hit, freezeCar } from './items.js';
 import { startRace } from './flow.js';
 import { joinRoomP2P } from './room.js';
+import { dynRemoteBreak } from './dynamic.js';
 
 /* ---------- Mehrspieler (Raum-Code, Live-Position der Mitspieler) ---------- */
 export const mp = { nr: null, code: '', on: false, active: false, round: 0, seen: {}, acc: 0, pending: null, unsub: [], last: '', creator: false, max: 8, busy: false, onChange: null };
@@ -56,6 +57,7 @@ export async function mpLeave() {
 export function mpFx(d) { if (mp.active && mp.nr) mp.nr.emit('fx', d).catch(() => {}); }
 export function mpOnFx(m) {
   const d = m.data; if (!d || m.isMe || !mp.active || !S.player || (S.state !== 'race' && S.state !== 'finish')) return;
+  if (d.k === 'brk') { if (isFinite(d.id)) dynRemoteBreak(d.id | 0); return; }
   if (d.k === 'ban') { const b = bananas.find(q => q.life <= 0); if (b && isFinite(d.x) && isFinite(d.z)) { b.life = 28; b.age = 0; b.owner = null; b.x = +d.x; b.z = +d.z; b.m.visible = true; b.m.position.set(b.x, 3, b.z); } return; }
   if (d.k === 'bolt') { if (S.player.shield > 0) { S.player.shield = 0; S.player.inv = 0.6; } else if (!S.player.fall) { S.player.slow = 3; S.player.spin = Math.max(S.player.spin, 0.5); S.player.s *= 0.5; S.flashT = 0.35; } return; }
   if (d.to !== S.player.peer) return;
@@ -107,5 +109,5 @@ export function mpSend(dt) {
   mp.acc += dt; if (mp.acc < 0.066) return; mp.acc = 0;
   const p = S.player, f1 = v => Math.round(v * 10) / 10;
   const fl = (p.air ? 1 : 0) | (p.chute ? 2 : 0) | (p.feather ? 4 : 0) | (p.boost > 0 ? 8 : 0) | (p.fall ? 16 : 0) | (p.shield > 0 ? 32 : 0) | (p.freeze > 0 ? 64 : 0) | (p.spin > 0 ? 128 : 0) | (p.loop ? 256 : 0);
-  mp.nr.presence({ x: f1(p.x), z: f1(p.z), a: Math.round(p.a * 100) / 100, y: f1(p.y), s: Math.round(p.s), st: Math.round(p.steer * 100) / 100, pt: Math.round(p.pitch * 100) / 100, p: f1(p.prog), f: p.finished ? Math.round(p.finishT * 100) / 100 : 0, fl }).catch(() => {});
+  mp.nr.presence({ x: f1(p.x), z: f1(p.z), a: Math.round(p.a * 100) / 100, y: f1(p.y), s: Math.round(p.s), st: Math.round(p.steer * 100) / 100, pt: Math.round(p.pitch * 100) / 100, p: f1(p.prog), f: p.finished ? Math.round(p.finishT * 100) / 100 : 0, fl, dc: S.world.dyn ? Math.round(S.world.dyn.t * 100) / 100 : 0 }).catch(() => {});
 }

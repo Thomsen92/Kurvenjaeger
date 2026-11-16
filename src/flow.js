@@ -4,6 +4,7 @@ import { $, btn, fmt, lsGet, lsSet } from './util.js';
 import { audioTick, updateWalkers } from './deco.js';
 import { resetRace, locate } from './cars.js';
 import { updateHazards } from './items.js';
+import { dynUpdate, dynReset } from './dynamic.js';
 import { sorted, stepCar, collide } from './physics.js';
 import { mp, mpBuildCars, mpSend, mpRemote } from './multiplayer.js';
 import { banner } from './input.js';
@@ -20,7 +21,7 @@ export function resetBoxes() {
 const hudOff = () => { $('#hud').hidden = true; $('#ctl').hidden = true; $('#speed').hidden = true; $('#wrong').hidden = true; $('#app').classList.remove('split'); };
 export function startRace() {
   if (mp.pending) { const pen = mp.pending; mp.pending = null; mpBuildCars(pen); } else { mp.active = false; resetRace(); }
-  resetBoxes();
+  resetBoxes(); dynReset();
   S.state = 'count'; S.countT = 3.6; S.lastCount = -1;
   $('#menu').hidden = true; $('#over').hidden = true; hideRewards();
   const split = S.humans.length > 1;
@@ -62,6 +63,7 @@ export function update(dt) {
   const go = S.state === 'race' || S.state === 'finish' || S.state === 'over';
   if (go && S.state !== 'over') S.raceT += dt;
   const order = sorted(); order.forEach((c, i) => { c.rank = i; });
+  dynUpdate(dt);
   for (const c of S.cars) { if (c.remote) { mpRemote(c, dt); continue; } if (!go) { locate(c); continue; } stepCar(c, dt); }
   mpSend(dt); audioTick();
   if (go) { collide(); updateHazards(dt); }

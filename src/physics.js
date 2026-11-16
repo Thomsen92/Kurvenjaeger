@@ -7,6 +7,7 @@ import { snd } from './deco.js';
 import { locate, respawn } from './cars.js';
 import { giveItem } from './items.js';
 import { aiControl } from './ai.js';
+import { dynCar } from './dynamic.js';
 import { banner, readInput } from './input.js';
 
 /* ---------- Fahrphysik ---------- */
@@ -100,6 +101,7 @@ export function stepCar(c, dt) {
       if (Math.abs(c.s) > 40 && Math.random() < dt * 30) spawnPuff(c.x, 3, c.z, q.type === 'water' ? 0xbfe6ff : q.type === 'mud' ? 0x6b4a2e : 0xff7ac0, 0.45, 12);
     }
   }
+  if (!air && c.dpT) { pT *= c.dpT; pA *= c.dpA; pG *= c.dpG; }
   let target = d.max * c.speedMul * (boosting ? 1.3 : 1) * (onGrass ? 0.5 : 1) * (c.slow > 0 ? 0.55 : 1) * pT;
   if (!air) {
     if (c.spin > 0) c.s = Math.max(0, c.s * Math.pow(0.12, dt));
@@ -125,23 +127,32 @@ export function stepCar(c, dt) {
   locate(c);
 
   if (S.world.loop && !c.air && tryLoop(c)) return;
+  // bewegliche Plattformen, hängende/rotierende Hindernisse, Kisten; sup = tragende Fläche (Hubrampe, Falltür, Schiebeplattform)
+  const sup = dynCar(c, dt);
   // Insel, Rampen, Abgrund
-  const onPlat = Math.abs(c.lat) < EDGE && !S.world.gap[c.idx];
+  const onPlat = (Math.abs(c.lat) < EDGE && !S.world.gap[c.idx]) || sup.solid;
   c.onPlat = onPlat;
   if (!c.air) {
     if (S.world.launch[c.idx] && Math.abs(c.lat) < ROAD_HALF + 2 && c.s > 25 && c.gapCd <= 0) {
       c.air = true; c.chute = false; c.hop = false; c.vy = 0.8 * c.s + 20; c.gapCd = 1.5; c.y = RAMP_H; c.drift = 0;
       if (c === S.player) vib(30);
     } else if (!onPlat) { c.fall = true; c.vy = -40; c.drift = 0; if (c === S.player) { banner('Abgestürzt!', '', 'show'); vib(60); } }
-    else { c.safe = c.idx; c.y = Math.abs(c.lat) < ROAD_HALF ? S.world.rampH[c.idx] : 0; }
+    else {
+      c.safe = c.idx;
+      const gy = sup.solid ? sup.h : Math.abs(c.lat) < ROAD_HALF ? S.world.rampH[c.idx] : 0;
+      if (c.deckY > 1.5 && c.y - gy > 1.5) { c.air = true; c.hop = true; c.chute = false; c.vy = clamp(c.dvy || 0, -40, 160); }   // Plattform fällt weg oder endet: Kart hebt ab
+      else { c.dvy = (gy - c.y) / Math.max(dt, 0.001); c.y = gy; }
+      c.deckY = sup.solid ? sup.h : 0;
+    }
   } else {
     c.vy -= G * dt;
     if (c.vy < 0 && !c.chute && !c.hop) { c.chute = true; c.vTerm = 34 + 36 * c.st.mass; if (c === S.player) banner('Fallschirm!', '', 'show'); }
     if (c.chute) c.vy = Math.max(c.vy, -c.vTerm);
     c.y += c.vy * dt;
-    if (c.y <= 0 && c.vy < 0) {
+    const gl = sup.solid ? sup.h : 0;
+    if (c.y <= gl && c.vy < 0) {
       c.chute = false; const wasFeather = c.feather; c.hop = false; c.feather = false;
-      if (onPlat) { c.air = false; c.y = 0; c.vy = 0; c.boost = Math.max(c.boost, wasFeather ? 0.9 : 0.35); if (c === S.player) S.shakeT = 0.18; for (let i = 0; i < 4; i++) spawnPuff(c.x, 3, c.z, 0xe8e8e8, 0.4, 6); }
+      if (onPlat) { c.air = false; c.y = gl; c.vy = 0; c.boost = Math.max(c.boost, wasFeather ? 0.9 : 0.35); if (c === S.player) S.shakeT = 0.18; for (let i = 0; i < 4; i++) spawnPuff(c.x, 3, c.z, 0xe8e8e8, 0.4, 6); }
       else { c.air = false; c.fall = true; if (c === S.player) { banner('Abgestürzt!', '', 'show'); vib(60); } }
     }
   }

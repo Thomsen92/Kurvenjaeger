@@ -5,6 +5,7 @@ import { N, TAU, angDiff, rand } from './util.js';
 import { scene, canvasTex, sun, makeTopTex, makeRoadTex, bas, checkTex, lam, bannerTex, boxTex, sphereG, padTex } from './core.js';
 import { makeJumpPad } from './karts.js';
 import { buildPuddles, buildWalkers, buildTheme } from './deco.js';
+import { planDynamic, buildDynamic } from './dynamic.js';
 
 /* Band entlang der Strecke. hA/hB dürfen Zahlen oder Funktionen des Stützpunkts sein. */
 export function ribbon(pts, segs, latA, latB, hA, hB, tile, c1, c2, seg) {
@@ -94,8 +95,10 @@ export function buildWorld(def) {
       for (let k = -44; k <= m + 6; k++) near[(bi + k + N) % N] = 1;
     }
   }
+  // Dynamische Streckenelemente (Hämmer, Plattformen, Kisten ...): Platz festlegen, Abschnitte mit Abgrund aus der Insel nehmen
+  const nearGap = near.slice(), plan = planDynamic(def, turn, near, gap), avoid = plan.avoid;
   const solidSeg = [];
-  for (let i = 0; i < N; i++) { let ok = true; for (const g of gaps) { const d = (i - g.i + N) % N; if (d < g.len) ok = false; } if (loop && (i - loop.i0 + N) % N < loop.m) ok = false; if (ok) solidSeg.push(i); }
+  for (let i = 0; i < N; i++) { let ok = !plan.pit[i]; for (const g of gaps) { const d = (i - g.i + N) % N; if (d < g.len) ok = false; } if (loop && (i - loop.i0 + N) % N < loop.m) ok = false; if (ok) solidSeg.push(i); }
   const rampSegs = [];
   for (const g of gaps) for (let k = -6; k < 0; k++) rampSegs.push((g.i + k + N) % N);
   const rampFn = off => i => rampH[i % N] + off;
@@ -156,7 +159,7 @@ export function buildWorld(def) {
     m.rotation.x = -Math.PI / 2; m.position.z = zz; pg.add(m); } group.add(pg); pads.push({ idx, lat });
   };
   const pc = Math.round(N / 145);
-  for (let k = 0; k < pc; k++) { const idx = Math.floor(k * N / pc + N / (2 * pc)); if (!near[idx]) addPad(idx); }
+  for (let k = 0; k < pc; k++) { const idx = Math.floor(k * N / pc + N / (2 * pc)); if (!avoid[idx]) addPad(idx); }
   for (const g of gaps) addPad(g.i - 16);
   if (loop) addPad(loop.i0 - 14, loop.lc);
 
@@ -166,7 +169,7 @@ export function buildWorld(def) {
   const bc = Math.round(N / 116);
   for (let k = 0; k < bc; k++) {
     let idx = Math.floor((k + 0.5) * N / bc);
-    while (near[idx % N] || idx < 30) idx += 12;
+    while (avoid[idx % N] || idx < 30) idx += 12;
     idx %= N; const p = pts[idx];
     for (const lat of [-44, -22, 0, 22, 44]) {
       const bx = p.x + p.nx * lat, bz = p.z + p.nz * lat;
@@ -178,12 +181,13 @@ export function buildWorld(def) {
   const jumps = [], jc = Math.round(N / 110);
   for (let k = 0; k < jc; k++) {
     let idx = Math.floor((k + 0.5) * N / jc + rand(-12, 12)); idx = (idx + N) % N;
-    if (near[idx] || idx < 40 || idx > N - 20) continue;
+    if (avoid[idx] || idx < 40 || idx > N - 20) continue;
     const p = pts[idx], lat = [-44, 44, 0, 22, -22][k % 5], jx = p.x + p.nx * lat, jz = p.z + p.nz * lat;
     const jg = makeJumpPad(); jg.scale.setScalar(1.5); jg.position.set(jx, 0.4, jz); jg.rotation.y = -p.ang; group.add(jg);
     jumps.push({ x: jx, z: jz, mesh: jg, anim: 0 });
   }
-  S.world = { def, group, pts, turn, gaps, gap, launch, near, rampH, pads, boxes, jumps, length, loop };
+  S.world = { def, group, pts, turn, gaps, gap, launch, near, avoid, rampH, pads, boxes, jumps, length, loop, nearGap };
+  S.world.dyn = buildDynamic(plan, group, pts, def);
   buildScenery(def, group, pts);
   buildPuddles(def, group, pts);
   buildWalkers(def, group, pts);
@@ -284,5 +288,7 @@ export function buildMini(def, pts) {
   mg.fillStyle = '#ff4b3e';
   if (S.world.loop) { const p = pts[(S.world.loop.i0 + (S.world.loop.m >> 1)) % N]; mg.fillStyle = '#4fd8ff'; mg.beginPath(); mg.arc(ox + (p.x - minx) * sc, oy + (p.z - minz) * sc, 3.6, 0, TAU); mg.fill(); mg.fillStyle = '#ff4b3e'; }
   for (const g of S.world.gaps) { const p = pts[(g.i + 7) % N]; mg.beginPath(); mg.arc(ox + (p.x - minx) * sc, oy + (p.z - minz) * sc, 3.2, 0, TAU); mg.fill(); }
+  mg.fillStyle = '#ffb02e';
+  for (const el of S.world.dyn.els) { const p = pts[Math.round(el.iC) % N]; mg.beginPath(); mg.arc(ox + (p.x - minx) * sc, oy + (p.z - minz) * sc, 2.4, 0, TAU); mg.fill(); }
   S.mini = { img, MM, sc, ox, oy, minx, minz };
 }
