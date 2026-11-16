@@ -1,4 +1,4 @@
-import { CHARS, KARTS, CHAR_SKINS, KART_SKINS } from './data.js';
+import { CHARS, KARTS, CHAR_SKINS, KART_SKINS, DIFF_SKILL } from './data.js';
 
 /* ---------- Spielstand: Erfahrungspunkte (XP), Ränge und Belohnungen ----------
    Jeder lokale Spielerplatz (0 bis 3) besitzt ein eigenes Profil im localStorage.
@@ -20,8 +20,9 @@ export const RANKS = [
   { id: 'meister', name: 'Meister', color: '#d05cff', hi: '#ffd2ff', step: 1200 }
 ];
 const TIERS = ['I', 'II', 'III'];
-export const LEVELS = [];          // { rank, tier, start }: ab start XP erreicht
-{ let xp = 0; for (let r = 0; r < RANKS.length; r++) for (let t = 0; t < 3; t++) { LEVELS.push({ rank: r, tier: t, start: xp }); xp += RANKS[r].step; } }
+export const LEVELS = [];          // { rank, tier, start }: ab start XP erreicht (wird bei geänderter Konfiguration neu aufgebaut)
+function buildLevels() { LEVELS.length = 0; let xp = 0; for (let r = 0; r < RANKS.length; r++) for (let t = 0; t < 3; t++) { LEVELS.push({ rank: r, tier: t, start: xp }); xp += RANKS[r].step; } }
+buildLevels();
 export const MAX_LEVEL = LEVELS.length - 1;
 export const levelName = l => RANKS[LEVELS[l].rank].name + ' ' + TIERS[LEVELS[l].tier];
 export const levelOf = xp => { let l = 0; while (l < MAX_LEVEL && xp >= LEVELS[l + 1].start) l++; return l; };
@@ -46,8 +47,35 @@ const REWARD_AT = [
   ['skin:janos:2'], ['cos:crown']
 ];
 export const REWARDS = [];         // { id, level }
-REWARD_AT.forEach((ids, level) => ids.forEach(id => REWARDS.push({ id, level })));
-const RULE = {}; for (const r of REWARDS) RULE[r.id] = r;
+const RULE = {};
+function buildRewards(over) {
+  REWARDS.length = 0; for (const k in RULE) delete RULE[k];
+  REWARD_AT.forEach((ids, level) => ids.forEach(id => { const o = over && Number.isInteger(over[id]) ? Math.max(1, Math.min(MAX_LEVEL, over[id])) : level; REWARDS.push({ id, level: o }); }));
+  REWARDS.sort((a, b) => a.level - b.level);
+  for (const r of REWARDS) RULE[r.id] = r;
+}
+buildRewards();
+export const DEFAULT_REWARD_LEVEL = {}; REWARDS.forEach(r => { DEFAULT_REWARD_LEVEL[r.id] = r.level; });
+
+/* ----- Spielwerte (vom Admin einstellbar, kommen aus der Cloud oder dem Zwischenspeicher) ----- */
+export const DEFAULT_CFG = { xpMul: 1, rankSteps: RANKS.map(r => r.step), botSkill: DIFF_SKILL.slice(), rewards: {} };
+let cfg = JSON.parse(JSON.stringify(DEFAULT_CFG)), xpMul = 1;
+export const getConfig = () => JSON.parse(JSON.stringify(cfg));
+export function applyConfig(c) {
+  const d = DEFAULT_CFG, num = (v, lo, hi, def) => { v = +v; return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def; };
+  c = c && typeof c === 'object' ? c : {};
+  cfg = {
+    xpMul: num(c.xpMul, 0.1, 10, 1),
+    rankSteps: d.rankSteps.map((def, i) => Math.round(num(Array.isArray(c.rankSteps) ? c.rankSteps[i] : def, 20, 100000, def))),
+    botSkill: d.botSkill.map((def, i) => num(Array.isArray(c.botSkill) ? c.botSkill[i] : def, 0.5, 1, def)),
+    rewards: {}
+  };
+  if (c.rewards && typeof c.rewards === 'object') for (const id in c.rewards) if (id in DEFAULT_REWARD_LEVEL && Number.isInteger(c.rewards[id]) && c.rewards[id] !== DEFAULT_REWARD_LEVEL[id]) cfg.rewards[id] = c.rewards[id];
+  xpMul = cfg.xpMul;
+  RANKS.forEach((r, i) => { r.step = cfg.rankSteps[i]; }); buildLevels(); buildRewards(cfg.rewards);
+  cfg.botSkill.forEach((v, i) => { DIFF_SKILL[i] = v; });
+  for (const p of profiles) syncUnlocks(p);
+}
 export const ruleOf = id => RULE[id];
 
 /* Startinhalte */
@@ -87,8 +115,12 @@ export const profiles = Array.from({ length: SLOTS }, (_, i) => loadSlot(i));
 export let save = profiles[0];      // Profil des gerade aktiven Spielerplatzes
 export let slot = 0;
 export function useSlot(i) { slot = Math.max(0, Math.min(SLOTS - 1, i | 0)); save = profiles[slot]; return slot; }
-export function persist(i) { const s = i === undefined ? slot : i; try { localStorage.setItem(KEY + s, JSON.stringify(profiles[s])); } catch (e) {} }
-export function resetSave() { for (let i = 0; i < SLOTS; i++) { profiles[i] = fresh(); persist(i); } try { localStorage.removeItem(OLD_KEY); } catch (e) {} useSlot(slot); }
+export const hooks = { persist: null };      // wird von cloud.js gesetzt: meldet geänderte Daten von Spielerplatz 0
+export function persist(i, silent) { const s = i === undefined ? slot : i; try { localStorage.setItem(KEY + s, JSON.stringify(profiles[s])); } catch (e) {} if (s === 0 && !silent && hooks.persist) hooks.persist(); }
+/* Ersetzt das Profil von Spielerplatz 0 (z. B. mit dem Cloud-Stand) */
+export function setProfile0(obj) { profiles[0] = sanitizeProfile(obj); syncUnlocks(profiles[0]); persist(0, true); useSlot(slot); }
+export const exportProfile0 = () => JSON.parse(JSON.stringify(profiles[0]));
+export function resetSave() { for (let i = 0; i < SLOTS; i++) { profiles[i] = fresh(); persist(i, i !== 0 ? true : false); } try { localStorage.removeItem(OLD_KEY); } catch (e) {} useSlot(slot); }
 
 export const isUnlocked = id => STARTERS.has(id) || !!save.unlocked[id];
 export const charOk = i => isUnlocked('char:' + CHARS[i].id);
@@ -174,6 +206,7 @@ export function grantRewards(r) {
   if (won) p.wins++;
   if (racing && r.place <= 3) p.podiums++;
   for (const m of MILESTONES) if (!p.chal[m.id] && m.test(p, info)) { p.chal[m.id] = 1; lines.push(['Meilenstein: ' + m.name, m.xp]); chal.push(m.name); }
+  if (xpMul !== 1) for (const l of lines) l[1] = Math.max(0, Math.round(l[1] * xpMul));
   const total = lines.reduce((s, l) => s + l[1], 0);
   p.xp += total;
 

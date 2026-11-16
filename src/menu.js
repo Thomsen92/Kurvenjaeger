@@ -10,6 +10,8 @@ import { updateHud } from './hud.js';
 import { thumb, setStage, setPreview, clearPreview } from './preview.js';
 import { save, slot as pslot, profiles, useSlot, resetSave, charOk, kartOk, skinOk, paintOk, cosOk, COSMETICS, unlockHint, ruleOf, levelName, progressOf, DIFF_NAMES } from './save.js';
 import { rankCardHtml, rewardListHtml } from './rank.js';
+import { cloudOn, acct, news, signUp, signIn, signOut, onCloud } from './cloud.js';
+import { openAdmin } from './admin.js';
 import { KEYMAP } from './input.js';
 import { sfx } from './audio.js';
 
@@ -35,6 +37,7 @@ const MODES = [
 ];
 
 /* ----- Zustand ----- */
+const ACC = { name: '', pw: '' };
 const M = { i: 0, sel: 'local', settings: false, msg: '', confirm: false, fc: null, dir: '' };
 const PREF = 'kj-prefs-v1';
 S.hp[0] = { ch: 0, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[1] = { ch: 1, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[2] = { ch: 0, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[3] = { ch: 1, sk: 0, kt: 0, pk: 0, cs: 0 };
@@ -134,6 +137,7 @@ function pageMain() {
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel">' +
     '<p class="lead">Drei Runden in einem Themenpark im Himmel. Weiche Kühen, Pfützen und Enten aus, sammle Item-Würfel und spring mit dem Fallschirm über die Abgründe.</p>' +
     '<div class="modes">' + MODES.map(m => '<button type="button" class="mode" data-a="mode" data-m="' + m.id + '" aria-pressed="' + (M.sel === m.id) + '">' + ICONS[m.id] + '<span><b>' + m.name + '</b><small>' + m.sub + '</small></span></button>').join('') + '</div>' +
+    (news.active ? '<p class="news">' + esc(news.text) + '</p>' : '') + (cloudOn ? '<p class="acctline">' + (acct.user ? 'Angemeldet als <b>' + esc(acct.user) + '</b> · Fortschritt wird online gespeichert' + (acct.banned ? ' (Konto gesperrt)' : acct.sync === 'dirty' ? ' · speichert …' : '') : 'Nicht angemeldet · Konto optional unter Einstellungen') + '</p>' : '') +
     rankCardHtml(profiles[0], S.cfg.humans > 1 && S.mode === 'local' ? 'Rang Spieler 1' : 'Dein Rang') + rewardListHtml() + '</div></section>';
 }
 function pageLocal() {
@@ -227,11 +231,25 @@ function pageSum() {
   if (S.mode === 'mp') foot = '<p class="hint">' + (!mp.on ? 'Du bist in keinem Raum.' : ps.length < 2 ? 'Warte auf Mitspieler …' : mpIsHost() ? 'Alle da? Dann starte das Rennen für alle.' : 'Der Gastgeber (★) startet das Rennen. Die Strecke bestimmt er.') + '</p>';
   return '<section class="page">' + stageEl('track') + '<div class="panel"><h2 class="ptitle">Rennübersicht</h2><div class="srow"><div class="st"><small>Modus</small><b>' + mode + '</b></div><button type="button" class="lnk" data-a="goto" data-s="main">Ändern</button></div>' + rows + opp + tr + foot + '</div></section>';
 }
+function accountHtml() {
+  if (!cloudOn) return '';
+  let h = '<div class="fld"><label>Konto (optional)</label>';
+  if (acct.user) {
+    h += '<p class="info">Angemeldet als <b>' + esc(acct.user) + '</b>' + (acct.banned ? ' · Konto gesperrt, Speichern nicht möglich' : acct.sync === 'dirty' ? ' · speichert …' : acct.sync === 'error' ? ' · Speichern fehlgeschlagen' : ' · Fortschritt ist online gesichert') + '. Du kannst auf jedem Gerät mit Name und Passwort weiterspielen.</p>' +
+      '<div class="row"><button type="button" class="ghost" data-a="logout">Abmelden</button>' + (acct.admin ? '<button type="button" class="cta" data-a="admin">Admin-Bereich</button>' : '') + '</div>';
+  } else {
+    h += '<p class="hint">Mit einem Konto wird dein Fortschritt online gespeichert und ist überall da. Du brauchst nur einen Namen und ein Passwort, keine E-Mail. Ohne Konto spielst du wie bisher lokal.</p>' +
+      '<input class="txt plain" id="accName" data-in="accName" maxlength="16" placeholder="Name (3 bis 16 Zeichen)" aria-label="Kontoname" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(ACC.name) + '">' +
+      '<input class="txt plain" id="accPw" type="password" data-in="accPw" placeholder="Passwort (mind. 6 Zeichen)" aria-label="Passwort" autocomplete="current-password" value="' + esc(ACC.pw) + '">' +
+      '<div class="row"><button type="button" class="cta" data-a="login"' + (acct.busy ? ' disabled' : '') + '>Anmelden</button><button type="button" class="ghost" data-a="register"' + (acct.busy ? ' disabled' : '') + '>Konto erstellen</button></div>';
+  }
+  return h + '<p class="hint' + (/gesperrt|vergeben|stimmt|Fehler|nicht|braucht|Name:/.test(acct.msg) ? ' err' : '') + '">' + esc(acct.busy ? 'Einen Moment …' : acct.msg) + '</p></div>';
+}
 function pageSettings() {
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel"><h2 class="ptitle">Einstellungen</h2>' +
     '<div class="fld"><label>Ton</label><div class="seg"><button type="button" data-a="mute" data-v="0" aria-pressed="' + !sfx.muted() + '">Ton an</button><button type="button" data-a="mute" data-v="1" aria-pressed="' + sfx.muted() + '">Ton aus</button></div></div>' +
     '<div class="fld"><label for="setName">Spielername (für Mehrspieler)</label><input id="setName" class="txt plain" data-in="name" maxlength="12" value="' + esc(S.name) + '" autocomplete="off"></div>' +
-    '<div class="fld"><label>Fortschritt</label>' + profiles.slice(0, Math.max(1, S.mode === 'local' ? S.cfg.humans : 1)).map((p, i) => rankCardHtml(p, S.cfg.humans > 1 && S.mode === 'local' ? 'Spieler ' + (i + 1) : 'Dein Rang') + '<p class="info">' + p.races + ' Rennen · ' + p.wins + ' Siege · ' + p.drifts + ' Drift-Boosts · ' + p.jumps + ' Sprünge</p>').join('') +
+    accountHtml() + '<div class="fld"><label>Fortschritt</label>' + profiles.slice(0, Math.max(1, S.mode === 'local' ? S.cfg.humans : 1)).map((p, i) => rankCardHtml(p, S.cfg.humans > 1 && S.mode === 'local' ? 'Spieler ' + (i + 1) : 'Dein Rang') + '<p class="info">' + p.races + ' Rennen · ' + p.wins + ' Siege · ' + p.drifts + ' Drift-Boosts · ' + p.jumps + ' Sprünge</p>').join('') +
     '<button type="button" class="ghost danger" data-a="reset">' + (M.confirm ? 'Wirklich alles löschen? Nochmal tippen' : 'Fortschritt zurücksetzen') + '</button></div></div></section>';
 }
 
@@ -345,6 +363,10 @@ function act(a, d) {
   if (a === 'mpCreate') { M.msg = 'Raum wird erstellt …'; show(false); mp.max = S.cfg.mpMax; mpCreate(S.cfg.mpMax).then(err => { M.msg = err; show(false); }); return; }
   if (a === 'mpJoin') { const code = ($('#mpCode').value || ''); M.msg = 'Verbinde …'; const m = $('#mpMsg'); if (m) m.textContent = M.msg; mpJoin(code).then(err => { M.msg = err; show(false); }); return; }
   if (a === 'mpLeave') { mpLeave().then(() => show(false)); return; }
+  if (a === 'login') { signIn(ACC.name.trim(), ACC.pw); return; }
+  if (a === 'register') { signUp(ACC.name.trim(), ACC.pw); return; }
+  if (a === 'logout') { signOut().then(() => { sanitize(); show(false); }); return; }
+  if (a === 'admin') { openAdmin(); return; }
   if (a === 'mute') { sfx.init(); sfx.set(d.v !== '1'); show(false); return; }
   if (a === 'reset') { if (!M.confirm) { M.confirm = true; show(false); return; } resetSave(); M.confirm = false; sanitize(); show(false); return; }
 }
@@ -355,6 +377,8 @@ $('#page').addEventListener('click', e => {
 $('#page').addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.in === 'name') { S.name = t.value.slice(0, 12); try { localStorage.setItem('kj-name', S.name); } catch (x) {} }
+  if (t.dataset.in === 'accName') ACC.name = t.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 16);
+  if (t.dataset.in === 'accPw') ACC.pw = t.value;
   if (t.dataset.in === 'code') t.value = t.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 });
 $('#page').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.in === 'code') act('mpJoin', {}); });
@@ -365,7 +389,7 @@ addEventListener('keydown', e => {
   if (e.key === 'Escape') go(-1);
 });
 /* Mehrspieler-Änderungen (Mitspieler kommen/gehen) aktualisieren Lobby und Start-Schaltfläche */
-export function initMenu() { mp.onChange = menuMpChanged; }
+export function initMenu() { mp.onChange = menuMpChanged; onCloud(() => { if (S.state !== 'menu') return; sanitize(); const c = cur(); if (document.activeElement && document.activeElement.dataset && document.activeElement.dataset.in && !acct.busy) return; show(false); }); }
 function menuMpChanged() {
   if (S.state !== 'menu') return;
   const c = cur();
