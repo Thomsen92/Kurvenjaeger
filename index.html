@@ -45,17 +45,25 @@
     </nav>
   </div>
 
-  <div id="over" class="overlay dim" hidden>
-    <div class="menuIn">
-      <p class="kicker" id="overKick">Zieleinlauf</p>
-      <h1 id="overTitle">Platz 1</h1>
-      <p class="newbest" id="newBest" hidden>Neue Bestzeit!</p>
-      <ol id="results"></ol>
-      <div class="res">
-        <div><small>Deine Zeit</small><b id="rTime">0:00.00</b></div>
-        <div><small>Beste Runde</small><b id="rLap">0:00.00</b></div>
+  <div id="over" class="overlay ceremony" hidden>
+    <div class="cerem">
+      <div id="podStage" class="podStage"><button id="skipBtn" class="ghost skip" type="button">Überspringen</button></div>
+      <div id="cpanel" class="cpanel">
+        <p class="kicker" id="overKick">Siegerehrung</p>
+        <h1 id="overTitle">Platz 1</h1>
+        <p class="newbest" id="newBest" hidden>Neue Bestzeit!</p>
+        <ol id="results"></ol>
+        <div class="res">
+          <div><small>Deine Zeit</small><b id="rTime">0:00.00</b></div>
+          <div><small>Beste Runde</small><b id="rLap">0:00.00</b></div>
+        </div>
+        <button id="rwBtn" class="cta" type="button">Belohnungen ansehen</button>
+        <div class="row">
+          <button class="ghost" type="button" data-nav="again">Neues Rennen</button>
+          <button class="ghost" type="button" data-nav="track">Streckenauswahl</button>
+          <button class="ghost" type="button" data-nav="menu">Hauptmenü</button>
+        </div>
       </div>
-      <button id="rwBtn" class="cta" type="button">Belohnungen ansehen</button>
     </div>
   </div>
 
@@ -74,8 +82,12 @@
       </div>
       <div id="rwGoal" class="goal" hidden></div>
       <div class="row">
-        <button id="againBtn" class="cta" type="button">Nochmal</button>
-        <button id="changeBtn" class="ghost" type="button">Zum Menü</button>
+        <button id="rwBack" class="cta" type="button">Zur Siegerehrung</button>
+      </div>
+      <div class="row">
+        <button class="ghost" type="button" data-nav="again">Neues Rennen</button>
+        <button class="ghost" type="button" data-nav="track">Streckenauswahl</button>
+        <button class="ghost" type="button" data-nav="menu">Hauptmenü</button>
       </div>
     </div>
   </div>

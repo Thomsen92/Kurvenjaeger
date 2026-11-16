@@ -7,6 +7,7 @@ import { puffs } from './karts.js';
 import { loopLat } from './world.js';
 import { sorted } from './physics.js';
 import { renderPreview } from './preview.js';
+import { renderPodium } from './podium.js';
 
 /* ---------- Zeichnen ---------- */
 const camPool = [];
@@ -46,7 +47,9 @@ export function draw(dt) {
   const sh = S.shakeT > 0 ? rand(-1, 1) * 3 : 0; S.shakeT = Math.max(0, S.shakeT - dt);
   sun.position.set(400, 900, 300);
   const R = S.renderer;
-  if (S.state === 'menu') {
+  if (S.state === 'over' && renderPodium(dt)) {
+    S.views = null;
+  } else if (S.state === 'menu') {
     const ref = S.player || S.cars[0];
     S.menuAng += dt * 0.5;
     S.camera.position.set(ref.x + Math.cos(S.menuAng) * 78, 30, ref.z + Math.sin(S.menuAng) * 78);

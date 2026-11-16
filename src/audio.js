@@ -80,11 +80,43 @@ export const sfx = (() => {
     spin: () => { sine(520, 940, 0.4, 0.1, { vib: 9, vd: 0.12, a: 0.03, w: 0.25 }); },
     lap: () => { run([E5, G5, C6], 0.08, 0.5, 0.11); },
     finish: () => { run([C5, E5, G5, C6, E6], 0.1, 0.9, 0.12, { r: 2, i: 1 }); run([C5, G5, C6, E6, G6], 0.04, 1.6, 0.09, { d: 0.55 }); shimmer([C7, G6], 1.4, 0.08, { d: 0.55 }); },
-    respawn: () => { run([G5, C6, E6], 0.06, 0.35, 0.08); }
+    respawn: () => { run([G5, C6, E6], 0.06, 0.35, 0.08); },
+    /* Siegerehrung: Trommelwirbel, Fanfare, Jubel, Feuerwerk */
+    roll: () => { for (let i = 0; i < 16; i++) whoosh(0.07, 0.05 + i * 0.004, 2600, 1500, { hp: true, d: i * 0.065, w: 0.05, peak: 0.1 }); sine(110, 70, 0.2, 0.2, { d: 1.05, w: 0.1 }); },
+    fanfare: () => { run([C5, G5, C6, E6, G6], 0.1, 1.1, 0.13, { r: 2, i: 1 }); run([C5, E5, G5, C6], 0.1, 1.4, 0.08, { d: 0.5, r: 2 }); shimmer([C7, G6, E6], 1.6, 0.09, { d: 0.5 }); sine(131, 131, 1.2, 0.18, { t: 'triangle', w: 0.2, d: 0.5 }); },
+    cheer: () => { for (let i = 0; i < 5; i++) whoosh(0.8 + Math.random() * 0.5, 0.07, 1400 + Math.random() * 800, 2600 + Math.random() * 1000, { q: 0.5, w: 0.3, d: i * 0.12, peak: 0.4 }); },
+    fw: () => { sine(900, 220, 0.25, 0.07, { w: 0.2, a: 0.01 }); whoosh(0.5, 0.1, 4500, 500, { hp: false, w: 0.5, peak: 0.08, d: 0.18 }); sine(90, 40, 0.3, 0.2, { w: 0.2, d: 0.18 }); }
   };
+  /* Siegerehrungs-Musik: kurze Marschfanfare in C-Dur, 8 Takte, läuft in Schleife */
+  const F5 = 698, F6 = 1397;
+  const BAR = [
+    [[C5, E5, G5, E5, C6, G5, E5, G5], [131, 196, 131, 196]], [[F5, A5, C6, A5, F6, C6, A5, C6], [175, 262, 175, 262]],
+    [[G5, B5, D6, B5, G5 * 2, D6, B5, D6], [196, 294, 196, 294]], [[C6, B5, C6, G5, E5, G5, C5, 0], [131, 196, 131, 0]],
+    [[E5, E5, G5, G5, C6, C6, E6, E6], [131, 196, 131, 196]], [[F5, F5, A5, A5, C6, C6, F6, F6], [175, 262, 175, 262]],
+    [[G5, B5, D6, F6, G5 * 2, F6, D6, B5], [196, 294, 196, 294]], [[C6, 0, C6, 0, E6, G6, C7, 0], [131, 196, 262, 0]]
+  ];
+  const E8 = 0.22;
+  let mTimer = 0, mNext = 0, mBar = 0, mOn = false;
+  function musicBar(i, off) {
+    const m = BAR[i % BAR.length];
+    m[0].forEach((f, k) => { if (!f) return; const d = off + k * E8; bell(f, 0.45, 0.06, { d, r: 2, i: 1, w: 0.3 }); sine(f, 0, 0.2, 0.035, { d, t: 'triangle', a: 0.01, w: 0.2 }); });
+    m[1].forEach((f, k) => { if (!f) return; const d = off + k * 2 * E8; sine(f, f, 0.34, 0.15, { d, t: 'triangle', a: 0.01, w: 0 }); if (k % 2) bell(f * 4, 0.3, 0.035, { d, r: 2, w: 0.2 }); });
+    for (let k = 0; k < 4; k++) { const d = off + k * 2 * E8; if (k % 2 === 0) sine(120, 45, 0.13, 0.22, { d, w: 0 }); else whoosh(0.09, 0.09, 3200, 1800, { d, hp: true, w: 0.15, peak: 0.1 }); }
+    for (let k = 0; k < 8; k++) whoosh(0.035, 0.03, 9000, 7000, { d: off + k * E8, hp: true, w: 0, peak: 0.1 });
+  }
+  function musicTick() {
+    if (!ac || muted || !mOn) return;
+    while (mNext < ac.currentTime + 0.5) { musicBar(mBar++, Math.max(0, mNext - ac.currentTime)); mNext += E8 * 8; }
+  }
+  function music(on) {
+    clearInterval(mTimer); mOn = !!on;
+    if (!on) return;
+    init(); if (!ac) return;
+    mBar = 0; mNext = ac.currentTime + 0.1; musicTick(); mTimer = setInterval(musicTick, 120);
+  }
   const CD = { bump: 220, land: 150, boost: 450, ramp: 350, pad: 300, spin: 400, hit: 200, fall: 600, tick: 0 };
   return {
-    init, muted: () => muted, running: () => !!ac && ac.state === 'running',
+    init, music, muted: () => muted, running: () => !!ac && ac.state === 'running',
     play: (n, a) => { try { const now = Date.now(); if (now - (last[n] || 0) < (CD[n] === undefined ? 80 : CD[n])) return; last[n] = now; if (A[n]) A[n](a); } catch (e) {} },
     beep: n => { try { A.beep(n); } catch (e) {} },
     set: m => { muted = m; try { localStorage.setItem('kj-mute', m ? '1' : '0'); } catch (e) {} if (master) master.gain.value = m ? 0 : VOL; },

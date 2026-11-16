@@ -4,7 +4,7 @@ import { $, lsGet, fmt, clamp } from './util.js';
 import { buildWorld } from './world.js';
 import { resetRace } from './cars.js';
 import { mp, mpPeers, mpHostGo, mpIsHost, mpMax, mpCreate, mpJoin, mpLeave, mpLobbyPresence, MP_ALPHA } from './multiplayer.js';
-import { startRace, toMenu, update } from './flow.js';
+import { startRace, toMenu, toTrackSelect, update } from './flow.js';
 import { draw } from './draw.js';
 import { updateHud } from './hud.js';
 import { thumb, setStage, setPreview, clearPreview } from './preview.js';
@@ -375,8 +375,13 @@ function menuMpChanged() {
 setInterval(() => { if (S.state === 'menu') mpLobbyPresence(); }, 1000);
 
 /* Ergebnis- und Belohnungsseiten: Weitere Schaltflächen (rwBtn siehe rewards.js) */
-$('#againBtn').addEventListener('click', () => { if (mp.on && mp.active) { if (mpIsHost() && mpPeers().length > 1) mpHostGo(); else toMenu(); } else startRace(); });
-$('#changeBtn').addEventListener('click', toMenu);
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-nav]'); if (!t) return;
+  const n = t.dataset.nav;
+  if (n === 'again') { if (mp.on && mp.active) { if (mpIsHost() && mpPeers().length > 1) mpHostGo(); else toMenu(); } else startRace(); }
+  else if (n === 'track') toTrackSelect();
+  else toMenu();
+});
 
 S.last = 0;
 export function frame(t) {

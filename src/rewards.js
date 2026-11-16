@@ -3,6 +3,7 @@ import { $ } from './util.js';
 import { sfx } from './audio.js';
 import { describe, levelName, progressOf, MAX_LEVEL } from './save.js';
 import { badgeHtml } from './rank.js';
+import { podiumSkip } from './podium.js';
 import { thumb, setStage, setPreview, clearPreview, kick } from './preview.js';
 
 /* ---------- Belohnungsbildschirm und Freischalt-Präsentation ---------- */
@@ -114,3 +115,5 @@ $('#rwBtn').addEventListener('click', showRewards);
 $('#unNext').addEventListener('click', () => openShowcase(qi + 1));
 $('#rwChips').addEventListener('click', e => { const b = e.target.closest('.uchip'); if (b) openShowcase(+b.dataset.i); });
 $('#rwTabs').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (!b) return; cur = all[+b.dataset.i]; $('#rwTabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); fill(); });
+$('#rwBack').addEventListener('click', () => { hideRewards(); $('#over').hidden = false; });
+$('#skipBtn').addEventListener('click', () => { podiumSkip(); $('#cpanel').classList.add('show'); });

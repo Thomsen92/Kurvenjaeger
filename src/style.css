@@ -301,4 +301,22 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .tile.tcos{min-height:56px;align-content:center}
 @media (min-width:560px){.grid4{grid-template-columns:repeat(4,1fr)}}
+/* ===== Siegerehrung ===== */
+#over.ceremony{padding:0;background:none;overflow:hidden;align-items:stretch;justify-content:stretch;animation:none}
+.cerem{display:flex;width:100%;height:100%;min-width:0}
+.podStage{flex:1;min-width:0;position:relative}
+.skip{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:15px;padding:9px 16px;background:rgba(10,12,18,.55)}
+.cpanel{width:min(400px,42vw);flex:none;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:18px 16px 24px;background:linear-gradient(rgba(10,12,18,.8),rgba(10,12,18,.94));opacity:0;transform:translateX(30px);pointer-events:none;transition:opacity .6s ease,transform .6s ease}
+.cpanel.show{opacity:1;transform:none;pointer-events:auto}
+#over:has(.cpanel.show) .skip{display:none}
+.cpanel h1{margin:0}
+@media (max-aspect-ratio:1/1){.cerem{flex-direction:column}.podStage{flex:0 0 46%}.cpanel{width:auto;flex:1;min-height:0;transform:translateY(30px)}}
+#results li.pl1{border-color:#ffc928;background:linear-gradient(90deg,rgba(255,201,40,.22),rgba(255,201,40,.05));box-shadow:0 0 0 2px rgba(255,201,40,.25);padding:14px}
+#results li.pl1 .n{color:#ffc928;font-size:26px}
+#results li.pl1 .nm{font-size:20px}
+#results li.pl2 .n{color:#cfd7e3}
+#results li.pl3 .n{color:#e09a5a}
+#results li.win .tr{width:20px;height:20px;vertical-align:-3px;margin-right:6px;fill:none;stroke:#ffc928;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#results li.me:not(.pl1){border-color:var(--yellow)}
+.cpanel .row>*{flex:1 1 110px;font-size:15px;padding:11px 10px}
 @media (prefers-reduced-motion:reduce){#page.in-fwd .panel,#page.in-back .panel,.rays,.uchip,.unTop h1,#rwLines li,#confetti i,.unTop .kicker{animation:none}#rwLines li{opacity:1}#confetti{display:none}}
