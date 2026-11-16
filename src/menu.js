@@ -133,12 +133,23 @@ function lobbyHtml() {
     '<p class="hint">Schick den Code an deine Freunde. Sie öffnen dasselbe Spiel und treten mit dem Code bei. <b>' + Math.min(ps.length, mx) + ' / ' + mx + '</b> Plätze belegt (★ = Gastgeber).</p><ul class="plist">' + rows + '</ul></div>';
 }
 
+/* Konto-Karte direkt auf der Startseite: Anmelden oder Konto erstellen, ohne Umweg über die Einstellungen */
+function accCard() {
+  if (!cloudOn) return '';
+  const msg = acct.busy ? 'Einen Moment …' : acct.msg, bad = /gesperrt|vergeben|stimmt|Fehler|nicht|braucht|Name:/.test(msg);
+  if (acct.user) {
+    return '<div class="acc in"><span class="accn">Angemeldet als <b>' + esc(acct.user) + '</b><small>' + (acct.banned ? 'Konto gesperrt, Speichern nicht möglich' : acct.sync === 'dirty' ? 'speichert …' : acct.sync === 'error' ? 'Speichern fehlgeschlagen' : 'Fortschritt ist online gesichert') + '</small></span><span class="accb">' + (acct.admin ? '<button type="button" class="ghost" data-a="admin">Admin</button>' : '') + '<button type="button" class="ghost" data-a="logout">Abmelden</button></span></div>';
+  }
+  return '<div class="acc"><h3>Konto (optional)</h3><p class="hint">Speichere deinen Fortschritt online und spiele überall weiter. Nur Name und Passwort, keine E-Mail.</p>' +
+    '<div class="accf"><input class="txt plain" id="accName" data-in="accName" maxlength="16" placeholder="Name" aria-label="Kontoname" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(ACC.name) + '"><input class="txt plain" id="accPw" type="password" data-in="accPw" placeholder="Passwort" aria-label="Passwort" autocomplete="current-password" value="' + esc(ACC.pw) + '"></div>' +
+    '<div class="row"><button type="button" class="cta" data-a="login"' + (acct.busy ? ' disabled' : '') + '>Anmelden</button><button type="button" class="ghost" data-a="register"' + (acct.busy ? ' disabled' : '') + '>Konto erstellen</button></div>' +
+    (msg ? '<p class="hint' + (bad ? ' err' : '') + '">' + esc(msg) + '</p>' : '') + '<p class="hint">Ohne Konto spielst du einfach wie bisher.</p></div>';
+}
 function pageMain() {
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel">' +
     '<p class="lead">Drei Runden in einem Themenpark im Himmel. Weiche Kühen, Pfützen und Enten aus, sammle Item-Würfel und spring mit dem Fallschirm über die Abgründe.</p>' +
-    '<div class="modes">' + MODES.map(m => '<button type="button" class="mode" data-a="mode" data-m="' + m.id + '" aria-pressed="' + (M.sel === m.id) + '">' + ICONS[m.id] + '<span><b>' + m.name + '</b><small>' + m.sub + '</small></span></button>').join('') + '</div>' +
-    (news.active ? '<p class="news">' + esc(news.text) + '</p>' : '') + (cloudOn ? '<p class="acctline">' + (acct.user ? 'Angemeldet als <b>' + esc(acct.user) + '</b> · Fortschritt wird online gespeichert' + (acct.banned ? ' (Konto gesperrt)' : acct.sync === 'dirty' ? ' · speichert …' : '') : 'Nicht angemeldet · Konto optional unter Einstellungen') + '</p>' : '') +
-    rankCardHtml(profiles[0], S.cfg.humans > 1 && S.mode === 'local' ? 'Rang Spieler 1' : 'Dein Rang') + rewardListHtml() + '</div></section>';
+    accCard() + '<div class="modes">' + MODES.map(m => '<button type="button" class="mode" data-a="mode" data-m="' + m.id + '" aria-pressed="' + (M.sel === m.id) + '">' + ICONS[m.id] + '<span><b>' + m.name + '</b><small>' + m.sub + '</small></span></button>').join('') + '</div>' +
+    (news.active ? '<p class="news">' + esc(news.text) + '</p>' : '') + rankCardHtml(profiles[0], S.cfg.humans > 1 && S.mode === 'local' ? 'Rang Spieler 1' : 'Dein Rang') + rewardListHtml() + '</div></section>';
 }
 function pageLocal() {
   const c = S.cfg, maxBots = 8 - c.humans, minBots = c.humans === 1 ? 1 : 0;
@@ -381,7 +392,11 @@ $('#page').addEventListener('input', e => {
   if (t.dataset.in === 'accPw') ACC.pw = t.value;
   if (t.dataset.in === 'code') t.value = t.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 });
-$('#page').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.in === 'code') act('mpJoin', {}); });
+$('#page').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.dataset.in === 'code') act('mpJoin', {});
+  else if (e.target.dataset.in === 'accName' || e.target.dataset.in === 'accPw') act('login', {});
+});
 $('#navBack').addEventListener('click', () => go(-1));
 $('#navNext').addEventListener('click', () => go(1));
 addEventListener('keydown', e => {

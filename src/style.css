@@ -341,4 +341,13 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .abtn{display:flex!important;gap:6px;flex-wrap:wrap}.abtn .ghost{font-size:14px;padding:8px 12px}
 .chk{display:flex;gap:8px;align-items:center;font-weight:600}
 textarea.txt{text-transform:none;resize:vertical}
+.acc{display:grid;gap:10px;padding:14px;border-radius:16px;background:var(--panel);border:2px solid var(--cyan)}
+.acc h3{margin:0;font-family:var(--display);font-weight:400;font-size:19px}
+.acc .hint{font-size:13px}
+.accf{display:grid;grid-template-columns:1fr 1fr;gap:8px}.accf .txt{margin:0;text-transform:none}
+.acc .row>*{flex:1 1 130px}
+.acc.in{display:flex;align-items:center;justify-content:space-between;gap:10px;border-color:var(--line);padding:10px 14px}
+.accn{display:grid;gap:2px;min-width:0}.accn small{color:var(--muted);font-size:12px}
+.accb{display:flex;gap:6px}.accb .ghost{font-size:14px;padding:8px 12px}
+@media (max-width:420px){.accf{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){#page.in-fwd .panel,#page.in-back .panel,.rays,.uchip,.unTop h1,#rwLines li,#confetti i,.unTop .kicker{animation:none}#rwLines li{opacity:1}#confetti{display:none}}
