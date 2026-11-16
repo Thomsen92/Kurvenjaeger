@@ -20,7 +20,7 @@ export const mpMax = () => { const ps = mpPeers(); return ps.length ? Math.max(2
 export function mpRender() { if (mp.onChange) mp.onChange(); }
 export function mpLobbyPresence() {
   if (!mp.on) return;
-  const d = { n: mpName(), ch: S.selChar, sk: S.selSkin, kt: S.selKart, pk: S.selPaint, tr: S.selTrack, go: mp.round, c: mp.creator ? 1 : 0, mx: mp.creator ? mp.max : 0 };
+  const d = { n: mpName(), ch: S.selChar, sk: S.selSkin, kt: S.selKart, pk: S.selPaint, cs: S.selCos | 0, tr: S.selTrack, go: mp.round, c: mp.creator ? 1 : 0, mx: mp.creator ? mp.max : 0 };
   const j = JSON.stringify(d); if (j === mp.last) return; mp.last = j;
   mp.nr.presence(d).catch(() => {});
 }
@@ -68,7 +68,7 @@ export function mpHostGo() {
   const ps = mpPeers(); if (ps.length < 2 || !(ps[0].isMe && ps[0].sameTab)) return;
   const ids = ps.slice(0, mpMax()).map(p => p.peer); mp.round++; mp.last = '';
   mp.seen[ps[0].peer] = mp.round;
-  mp.nr.presence({ n: mpName(), ch: S.selChar, sk: S.selSkin, kt: S.selKart, pk: S.selPaint, tr: S.selTrack, ids, go: mp.round, c: mp.creator ? 1 : 0, mx: mp.creator ? mp.max : 0 }).catch(() => {});
+  mp.nr.presence({ n: mpName(), ch: S.selChar, sk: S.selSkin, kt: S.selKart, pk: S.selPaint, cs: S.selCos | 0, tr: S.selTrack, ids, go: mp.round, c: mp.creator ? 1 : 0, mx: mp.creator ? mp.max : 0 }).catch(() => {});
   mp.last = '';
   mpStart(ids, S.selTrack);
 }
@@ -82,8 +82,8 @@ export function mpBuildCars(pen) {
   for (const id of pen.ids) {
     const p = ps.find(q => q.peer === id); if (!p || !p.presence || !p.presence.n) continue;
     const r = p.presence, me = p.isMe && p.sameTab, ch = CHARS[r.ch | 0] || CHARS[0], kart = KARTS[r.kt | 0] || KARTS[0];
-    const o = { name: me ? 'Du' : String(r.n).slice(0, 12), skill: 1, kart, ch, isPlayer: me, pi: 0, driftN: 0, remote: !me, peer: id, sk: (r.sk | 0) % 3, pk: (r.pk | 0) % 3 };
-    const slot = S.cars.length, c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk), slot, st: stats(o.kart, o.ch) }, o);
+    const o = { name: me ? 'Du' : String(r.n).slice(0, 12), skill: 1, kart, ch, isPlayer: me, pi: 0, driftN: 0, jumpN: 0, remote: !me, peer: id, sk: (r.sk | 0) % 3, pk: (r.pk | 0) % 3, cs: Math.max(0, Math.min(3, r.cs | 0)) };
+    const slot = S.cars.length, c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk, o.cs), slot, st: stats(o.kart, o.ch) }, o);
     placeCar(c, slot); S.cars.push(c); carsGroup.add(c.mesh); if (me) { S.player = c; S.humans = [c]; }
   }
   if (!S.player) { resetRace(); return; }

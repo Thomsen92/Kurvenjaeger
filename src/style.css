@@ -274,4 +274,31 @@ button:disabled{opacity:.4;cursor:not-allowed}
   .tile img{width:56px;height:56px}.cards .card{grid-template-columns:80px 1fr}.cards .card img{width:80px;height:60px}.cards .card .lk{left:40px}
   #nav .cta{min-width:0;padding:12px 16px;font-size:18px}.ptitle{font-size:21px}
 }
+/* ===== Rang, XP und Belohnungsliste ===== */
+.rbadge{flex:none;position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 32% 28%,var(--rh),var(--rc) 62%,#00000040);border:3px solid var(--rh);box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 18px color-mix(in srgb,var(--rc) 55%,transparent)}
+.rbadge::before{content:"";position:absolute;inset:7px;border-radius:50%;border:2px solid rgba(0,0,0,.28)}
+.rbadge i{position:relative;font-style:normal;font-family:var(--display);font-size:22px;color:#1b1e27;text-shadow:0 1px 0 rgba(255,255,255,.45)}
+.rbadge.pop{animation:badgePop .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes badgePop{0%{transform:scale(.4) rotate(-30deg)}100%{transform:none}}
+.rankcard{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;background:var(--panel);border:2px solid var(--line)}
+.rankcard .rk{display:grid;gap:4px;min-width:0;flex:1}
+.rankcard small{font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rankcard .rk>b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.1}
+.xpbar{height:12px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}
+.xpbar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:width .75s ease-out}
+.xpl{font-size:13px;color:var(--muted)}.xpl b{color:var(--ink)}
+.rwup{margin-top:8px;padding:10px 14px;border-radius:12px;text-align:center;font-family:var(--display);font-size:20px;color:#1b1e27;background:var(--yellow);animation:badgePop .6s cubic-bezier(.2,1.6,.4,1)}
+#rwTabs{margin-bottom:4px}
+.rwlist{border-radius:14px;border:2px solid var(--line);background:var(--panel);padding:0 14px}
+.rwlist summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:15px}
+.rwl h4{margin:10px 0 6px;font-family:var(--display);font-weight:400;font-size:16px}
+.rwl ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.rwl li{display:grid;padding:6px 10px;border-radius:10px;border:2px solid var(--line);font-size:13px}
+.rwl li small{font-size:11px;color:var(--muted)}
+.rwl li.on{border-color:var(--green);background:rgba(111,220,140,.1)}
+.rwl li.off{opacity:.55}
+.rwl .hint{margin:10px 0 12px}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.tile.tcos{min-height:56px;align-content:center}
+@media (min-width:560px){.grid4{grid-template-columns:repeat(4,1fr)}}
 @media (prefers-reduced-motion:reduce){#page.in-fwd .panel,#page.in-back .panel,.rays,.uchip,.unTop h1,#rwLines li,#confetti i,.unTop .kicker{animation:none}#rwLines li{opacity:1}#confetti{display:none}}

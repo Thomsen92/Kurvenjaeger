@@ -38,11 +38,11 @@ function bbox(root) {
 }
 /* Baut (und merkt sich) ein zentriertes Modell. spec: { pv:'char', ch, sk } oder { pv:'kart', kt, pk, drv:{ch,sk} } */
 function model(spec) {
-  const key = spec.pv === 'char' ? 'c' + spec.ch + '_' + spec.sk : 'k' + spec.kt + '_' + spec.pk + (spec.drv ? '_d' + spec.drv.ch + '_' + spec.drv.sk : '');
+  const key = spec.pv === 'char' ? 'c' + spec.ch + '_' + spec.sk : 'k' + spec.kt + '_' + spec.pk + (spec.drv ? '_d' + spec.drv.ch + '_' + spec.drv.sk : '') + (spec.cs ? '_s' + spec.cs : '');
   if (cache[key]) return cache[key];
   let m;
   if (spec.pv === 'char') { m = makeDriver(CHARS[spec.ch], spec.sk); m.position.set(0, 0, 0); }
-  else m = spec.drv ? makeCarMesh(KARTS[spec.kt], CHARS[spec.drv.ch], spec.drv.sk, spec.pk) : makeKart(KARTS[spec.kt], spec.pk);
+  else m = spec.drv ? makeCarMesh(KARTS[spec.kt], CHARS[spec.drv.ch], spec.drv.sk, spec.pk, spec.cs) : makeKart(KARTS[spec.kt], spec.pk);
   const holder = new THREE.Group(); holder.add(m);
   const box = bbox(holder), c = box.getCenter(new THREE.Vector3());
   m.position.sub(c);
@@ -58,7 +58,7 @@ function fit(cam, r, aspect) {
 const TH = 176; let rt = null;
 const thumbCache = {};
 export function thumb(spec) {
-  const key = spec.pv === 'char' ? 'c' + spec.ch + '_' + spec.sk : 'k' + spec.kt + '_' + spec.pk;
+  const key = spec.pv === 'char' ? 'c' + spec.ch + '_' + spec.sk : 'k' + spec.kt + '_' + spec.pk + (spec.cs ? '_s' + spec.cs : '') + (spec.drv ? '_d' + spec.drv.ch + '_' + spec.drv.sk : '');
   if (thumbCache[key]) return thumbCache[key];
   const r = S.renderer; if (!r) return '';
   if (!rt) rt = new THREE.WebGLRenderTarget(TH, TH);

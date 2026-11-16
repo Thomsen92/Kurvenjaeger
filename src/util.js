@@ -26,7 +26,8 @@ S.selSkin = 0;
 S.selPaint = 0;
 S.mode = 'local';
 S.cfg = { humans: 1, bots: 3, diff: 1, mpMax: 4 };
-S.hp = [0, 1, 2, 3].map(i => ({ ch: 0, sk: 0, kt: 0, pk: 0 }));
+S.hp = [0, 1, 2, 3].map(i => ({ ch: 0, sk: 0, kt: 0, pk: 0, cs: 0 }));
+S.selCos = 0;
 S.humans = [];
 S.views = null;
 try { S.name = localStorage.getItem('kj-name') || ''; } catch (e) { S.name = ''; }

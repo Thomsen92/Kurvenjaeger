@@ -29,7 +29,7 @@ export function resetRace() {
   const list = [];
   for (let i = 0; i < nh; i++) {
     const h = S.hp[i];
-    list.push({ name: nh > 1 ? 'Spieler ' + (i + 1) : 'Du', skill: 1, kart: KARTS[h.kt], ch: CHARS[h.ch], isPlayer: true, pi: i, sk: h.sk, pk: h.pk });
+    list.push({ name: nh > 1 ? 'Spieler ' + (i + 1) : 'Du', skill: 1, kart: KARTS[h.kt], ch: CHARS[h.ch], isPlayer: true, pi: i, sk: h.sk, pk: h.pk, cs: h.cs | 0 });
   }
   const base = DIFF_SKILL[S.cfg.diff] === undefined ? 0.9 : DIFF_SKILL[S.cfg.diff], names = shuffle(BOTS.slice());
   for (let i = 0; i < nb; i++) {
@@ -39,7 +39,7 @@ export function resetRace() {
   shuffle(list);
   S.gridN = list.length;
   list.forEach((o, slot) => {
-    const c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk), slot, st: stats(o.kart, o.ch), driftN: 0 }, o);
+    const c = Object.assign({ mesh: makeCarMesh(o.kart, o.ch, o.sk, o.pk, o.cs | 0), slot, st: stats(o.kart, o.ch), driftN: 0, jumpN: 0 }, o);
     placeCar(c, slot); S.cars.push(c); carsGroup.add(c.mesh);
     if (c.isPlayer) S.humans.push(c);
   });

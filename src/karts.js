@@ -217,9 +217,27 @@ export function makeDriver(ch, k) {
   return g;
 }
 
-export function makeCarMesh(kart, ch, sk, pk) {
+/* Seltener Kartschmuck (cs: 0 keiner, 1 Wimpel, 2 Heiligenschein, 3 Goldkrone) */
+function addCosmetic(body, cs) {
+  const gold = bas(0xffc928), g = new THREE.Group(); g.userData.cos = cs;
+  if (cs === 1) {
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 26, 6), bas(0xdfe6f3)); mast.position.set(-15, 20, 9); g.add(mast);
+    const flag = new THREE.Mesh(new THREE.ConeGeometry(5, 14, 3), bas(0xff4b3e, { side: THREE.DoubleSide })); flag.rotation.z = Math.PI / 2; flag.rotation.x = Math.PI / 2; flag.position.set(-22, 29, 9); g.add(flag);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 6), gold); tip.position.set(-15, 33.5, 9); g.add(tip);
+  } else if (cs === 2) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(6, 0.9, 8, 24), bas(0xfff0a0, { transparent: true, opacity: 0.95 })); ring.rotation.x = Math.PI / 2; ring.position.set(-3.6, 33, 0); g.add(ring);
+  } else if (cs === 3) {
+    const crown = new THREE.Group(); crown.position.set(-3.6, 27, 0);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 2.6, 12, 1, true), bas(0xffc928, { side: THREE.DoubleSide })); crown.add(band);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, sp = new THREE.Mesh(new THREE.ConeGeometry(1.2, 3.6, 5), gold); sp.position.set(Math.cos(a) * 4.2, 3, Math.sin(a) * 4.2); crown.add(sp); }
+    g.add(crown);
+  }
+  body.add(g);
+}
+export function makeCarMesh(kart, ch, sk, pk, cs) {
   const g = makeKart(kart, pk), d = makeDriver(ch, sk);
   g.userData.body.add(d); g.userData.driver = d;
+  if (cs > 0 && cs <= 3) addCosmetic(g.userData.body, cs | 0);
   return g;
 }
 

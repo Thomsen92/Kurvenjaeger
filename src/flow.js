@@ -44,9 +44,14 @@ export function showResults() {
   if (isBest) lsSet(key, S.player.finishT);
   $('#newBest').hidden = !isBest;
   hudOff();
-  /* Belohnungen werden sofort vergeben und gespeichert, auch wenn der Bildschirm später geschlossen wird */
-  const rw = grantRewards({ place, cars: S.cars.length, opponents: S.cars.length - 1, mode: S.mode, trackId: S.world.def.id, isBest, driftN: S.player.driftN | 0, diff: S.cfg.diff });
-  prepareRewards(rw, { place, multi, trial, time: S.player.finishT });
+  /* XP werden sofort vergeben und gespeichert, auch wenn der Bildschirm später geschlossen wird.
+     Jeder menschliche Spieler bekommt die XP in sein eigenes Profil; Mitspieler im Online-Raum (remote) werden nie gewertet. */
+  const rws = S.humans.filter(h => !h.remote).map(h => {
+    const pl = order.indexOf(h) + 1;
+    const r = grantRewards({ slot: h.pi | 0, place: pl, cars: S.cars.length, opponents: S.cars.length - 1, mode: S.mode, trackId: S.world.def.id, isBest: isBest && h === S.player, driftN: h.driftN | 0, jumpN: h.jumpN | 0, diff: S.cfg.diff });
+    r.label = multi ? 'Spieler ' + ((h.pi | 0) + 1) : ''; r.place = pl; return r;
+  });
+  prepareRewards(rws, { multi, trial, time: S.player.finishT });
   $('#over').hidden = false; S.state = 'over';
 }
 

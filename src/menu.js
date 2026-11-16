@@ -8,7 +8,8 @@ import { startRace, toMenu, update } from './flow.js';
 import { draw } from './draw.js';
 import { updateHud } from './hud.js';
 import { thumb, setStage, setPreview, clearPreview } from './preview.js';
-import { save, resetSave, charOk, kartOk, skinOk, paintOk, unlockHint, ruleOf, unlockedCount, TOTAL, DIFF_NAMES } from './save.js';
+import { save, slot as pslot, profiles, useSlot, resetSave, charOk, kartOk, skinOk, paintOk, cosOk, COSMETICS, unlockHint, ruleOf, levelName, progressOf, DIFF_NAMES } from './save.js';
+import { rankCardHtml, rewardListHtml } from './rank.js';
 import { KEYMAP } from './input.js';
 import { sfx } from './audio.js';
 
@@ -36,15 +37,19 @@ const MODES = [
 /* ----- Zustand ----- */
 const M = { i: 0, sel: 'local', settings: false, msg: '', confirm: false, fc: null, dir: '' };
 const PREF = 'kj-prefs-v1';
-S.hp[0] = { ch: 0, sk: 0, kt: 0, pk: 0 }; S.hp[1] = { ch: 1, sk: 0, kt: 0, pk: 0 }; S.hp[2] = { ch: 0, sk: 0, kt: 0, pk: 0 }; S.hp[3] = { ch: 1, sk: 0, kt: 0, pk: 0 };
-function syncP1() { const h = S.hp[0]; S.selChar = h.ch; S.selSkin = h.sk; S.selKart = h.kt; S.selPaint = h.pk; }
+S.hp[0] = { ch: 0, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[1] = { ch: 1, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[2] = { ch: 0, sk: 0, kt: 0, pk: 0, cs: 0 }; S.hp[3] = { ch: 1, sk: 0, kt: 0, pk: 0, cs: 0 };
+function syncP1() { const h = S.hp[0]; S.selChar = h.ch; S.selSkin = h.sk; S.selKart = h.kt; S.selPaint = h.pk; S.selCos = h.cs | 0; }
 function savePrefs() { try { localStorage.setItem(PREF, JSON.stringify({ hp: S.hp, cfg: S.cfg, mode: S.mode, track: S.selTrack, sel: M.sel })); } catch (e) {} }
 function sanitize() {
-  for (const h of S.hp) {
+  const keep = pslot;
+  S.hp.forEach((h, i) => {
+    useSlot(i);
     h.ch = clamp(h.ch | 0, 0, CHARS.length - 1); h.kt = clamp(h.kt | 0, 0, KARTS.length - 1);
     if (!charOk(h.ch)) { h.ch = 0; h.sk = 0; } if (!skinOk(h.ch, h.sk)) h.sk = 0;
     if (!kartOk(h.kt)) { h.kt = 0; h.pk = 0; } if (!paintOk(h.kt, h.pk)) h.pk = 0;
-  }
+    h.cs = clamp(h.cs | 0, 0, COSMETICS.length); if (!cosOk(h.cs)) h.cs = 0;
+  });
+  useSlot(keep);
   S.cfg.humans = clamp(S.cfg.humans | 0, 1, 4); S.cfg.diff = clamp(S.cfg.diff | 0, 0, 2); S.cfg.mpMax = clamp(S.cfg.mpMax | 0, 2, 8);
   S.cfg.bots = clamp(S.cfg.bots | 0, S.cfg.humans === 1 ? 1 : 0, 8 - S.cfg.humans);
   syncP1();
@@ -53,7 +58,7 @@ function sanitize() {
   try {
     const o = JSON.parse(localStorage.getItem(PREF) || 'null');
     if (o) {
-      if (Array.isArray(o.hp)) o.hp.slice(0, 4).forEach((h, i) => Object.assign(S.hp[i], { ch: h.ch | 0, sk: h.sk | 0, kt: h.kt | 0, pk: h.pk | 0 }));
+      if (Array.isArray(o.hp)) o.hp.slice(0, 4).forEach((h, i) => Object.assign(S.hp[i], { ch: h.ch | 0, sk: h.sk | 0, kt: h.kt | 0, pk: h.pk | 0, cs: h.cs | 0 }));
       if (o.cfg) Object.assign(S.cfg, o.cfg);
       if (['mp', 'local', 'trial'].includes(o.mode)) S.mode = o.mode;
       if (o.sel && MODES.some(m => m.id === o.sel)) M.sel = o.sel;
@@ -112,7 +117,7 @@ export function jumpTo(id, pi) {
 
 /* ----- Seiten ----- */
 const seg = (k, vals, curV, labels) => '<div class="seg" role="group">' + vals.map((v, i) => '<button type="button" data-a="cfg" data-k="' + k + '" data-v="' + v + '" aria-pressed="' + (v === curV) + '">' + (labels ? labels[i] : v) + '</button>').join('') + '</div>';
-const short = id => { const r = ruleOf(id); if (!r) return ''; return r.type === 'races' ? r.n + ' Rennen' : r.type === 'wins' ? r.n + (r.n === 1 ? ' Sieg' : ' Siege') : r.type === 'podiums' ? r.n + ' Podien' : r.n + ' Punkte'; };
+const short = id => { const r = ruleOf(id); return r ? levelName(r.level) : ''; };
 const stageEl = (extra) => '<div class="stage live' + (extra ? ' ' + extra : '') + '" id="stage"></div>';
 
 function lobbyHtml() {
@@ -129,7 +134,7 @@ function pageMain() {
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel">' +
     '<p class="lead">Drei Runden in einem Themenpark im Himmel. Weiche Kühen, Pfützen und Enten aus, sammle Item-Würfel und spring mit dem Fallschirm über die Abgründe.</p>' +
     '<div class="modes">' + MODES.map(m => '<button type="button" class="mode" data-a="mode" data-m="' + m.id + '" aria-pressed="' + (M.sel === m.id) + '">' + ICONS[m.id] + '<span><b>' + m.name + '</b><small>' + m.sub + '</small></span></button>').join('') + '</div>' +
-    '<p class="best">Freigeschaltet: ' + unlockedCount() + ' von ' + TOTAL + ' · ' + save.points + ' Punkte · ' + save.races + ' Rennen</p></div></section>';
+    rankCardHtml(profiles[0], S.cfg.humans > 1 && S.mode === 'local' ? 'Rang Spieler 1' : 'Dein Rang') + rewardListHtml() + '</div></section>';
 }
 function pageLocal() {
   const c = S.cfg, maxBots = 8 - c.humans, minBots = c.humans === 1 ? 1 : 0;
@@ -137,7 +142,7 @@ function pageLocal() {
   if (c.humans > 1) keys = '<div class="keys"><h3>Tastenbelegung (geteilter Bildschirm)</h3>' + Array.from({ length: c.humans }, (_, i) => '<p><b>Spieler ' + (i + 1) + '</b> ' + KEYMAP[i].hint + '</p>').join('') + '</div>';
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel">' +
     '<h2 class="ptitle">Lokales Spiel</h2>' +
-    '<div class="fld"><label>Menschliche Spieler</label>' + seg('humans', [1, 2, 3, 4], c.humans) + '<p class="hint">' + (c.humans === 1 ? 'Du fährst allein, gesteuert per Touch oder Tastatur.' : 'Geteilter Bildschirm. Jeder wählt später Charakter und Kart.') + '</p></div>' + keys +
+    '<div class="fld"><label>Menschliche Spieler</label>' + seg('humans', [1, 2, 3, 4], c.humans) + '<p class="hint">' + (c.humans === 1 ? 'Du fährst allein, gesteuert per Touch oder Tastatur.' : 'Geteilter Bildschirm. Jeder wählt später Charakter und Kart und sammelt XP in seinem eigenen Profil (Spieler 1 bis 4).') + '</p></div>' + keys +
     '<div class="fld"><label>Bots</label><div class="step"><button type="button" class="ghost" data-a="bots" data-d="-1" ' + (c.bots <= minBots ? 'disabled' : '') + ' aria-label="Weniger Bots">−</button><b id="botN">' + c.bots + '</b><button type="button" class="ghost" data-a="bots" data-d="1" ' + (c.bots >= maxBots ? 'disabled' : '') + ' aria-label="Mehr Bots">+</button></div><p class="hint">Insgesamt ' + (c.humans + c.bots) + ' Fahrer am Start (höchstens 8).</p></div>' +
     '<div class="fld"><label>Schwierigkeit der Bots</label>' + seg('diff', [0, 1, 2], c.diff, DIFF_NAMES) + '<p class="hint">' + ['Entspannt fahren, wenig Bonus-Punkte.', 'Ausgewogen, ein paar Bonus-Punkte.', 'Harte Gegner, die meisten Bonus-Punkte.'][c.diff] + '</p></div>' +
     '</div></section>';
@@ -186,11 +191,16 @@ function pageKart(pi) {
     const ok = kOk && paintOk(ki, i), id = 'paint:' + d0.id + ':' + i;
     return '<button type="button" class="tile sm' + (ok ? '' : ' locked') + (M.fc.pk === i ? ' focus' : '') + '" data-a="paint" data-i="' + i + '" aria-pressed="' + (h.kt === ki && h.pk === i) + '"><img alt="" src="' + thumb({ pv: 'kart', kt: ki, pk: i }) + '"><b>' + k[0] + '</b>' + (ok ? '' : LOCK + '<small>' + (kOk ? short(id) : 'Kart') + '</small>') + '</button>';
   }).join('');
+  const coss = [['Kein Schmuck', 0]].concat(COSMETICS.map((c, i) => [c.name, i + 1])).map(([nm, k]) => {
+    const ok = cosOk(k);
+    return '<button type="button" class="tile sm tcos' + (ok ? '' : ' locked') + (M.fc.cs === k ? ' focus' : '') + '" data-a="cos" data-i="' + k + '" aria-pressed="' + (h.cs === k) + '"><b>' + nm + '</b>' + (ok ? '' : LOCK + '<small>' + short('cos:' + COSMETICS[k - 1].id) + '</small>') + '</button>';
+  }).join('');
   let lockMsg = '';
-  if (!kOk) lockMsg = 'Gesperrt: ' + unlockHint('kart:' + d0.id);
+  if (!cosOk(M.fc.cs)) lockMsg = 'Gesperrt: ' + unlockHint('cos:' + COSMETICS[M.fc.cs - 1].id);
+  else if (!kOk) lockMsg = 'Gesperrt: ' + unlockHint('kart:' + d0.id);
   else if (!paintOk(ki, M.fc.pk)) lockMsg = 'Gesperrt: ' + unlockHint('paint:' + d0.id + ':' + M.fc.pk);
   return '<section class="page">' + stageEl() + '<div class="panel"><h2 class="ptitle">' + who(pi) + 'Kart</h2>' +
-    '<div class="cards">' + cards + '</div><h3 class="sec">Lack</h3><div class="grid3">' + paints + '</div>' +
+    '<div class="cards">' + cards + '</div><h3 class="sec">Lack</h3><div class="grid3">' + paints + '</div><h3 class="sec">Seltener Kartschmuck</h3><div class="grid4">' + coss + '</div>' +
     '<p class="lockmsg" id="lockMsg"' + (lockMsg ? '' : ' hidden') + '>' + LOCK + '<span>' + esc(lockMsg) + '</span></p></div></section>';
 }
 function pageTrack() {
@@ -221,7 +231,7 @@ function pageSettings() {
   return '<section class="page solo"><div class="stage" aria-hidden="true"></div><div class="panel"><h2 class="ptitle">Einstellungen</h2>' +
     '<div class="fld"><label>Ton</label><div class="seg"><button type="button" data-a="mute" data-v="0" aria-pressed="' + !sfx.muted() + '">Ton an</button><button type="button" data-a="mute" data-v="1" aria-pressed="' + sfx.muted() + '">Ton aus</button></div></div>' +
     '<div class="fld"><label for="setName">Spielername (für Mehrspieler)</label><input id="setName" class="txt plain" data-in="name" maxlength="12" value="' + esc(S.name) + '" autocomplete="off"></div>' +
-    '<div class="fld"><label>Fortschritt</label><p class="info">' + unlockedCount() + ' von ' + TOTAL + ' Inhalten freigeschaltet · ' + save.races + ' Rennen · ' + save.wins + ' Siege · ' + save.points + ' Punkte</p>' +
+    '<div class="fld"><label>Fortschritt</label>' + profiles.slice(0, Math.max(1, S.mode === 'local' ? S.cfg.humans : 1)).map((p, i) => rankCardHtml(p, S.cfg.humans > 1 && S.mode === 'local' ? 'Spieler ' + (i + 1) : 'Dein Rang') + '<p class="info">' + p.races + ' Rennen · ' + p.wins + ' Siege · ' + p.drifts + ' Drift-Boosts · ' + p.jumps + ' Sprünge</p>').join('') +
     '<button type="button" class="ghost danger" data-a="reset">' + (M.confirm ? 'Wirklich alles löschen? Nochmal tippen' : 'Fortschritt zurücksetzen') + '</button></div></div></section>';
 }
 
@@ -251,7 +261,7 @@ function backdrop() { buildWorld(TRACKS[S.selTrack]); resetRace(); }
 const KICK = { main: 'Hauptmenü', mp: 'Mehrspieler', local: 'Lokales Spiel', char: 'Charakterauswahl', kart: 'Autoauswahl', track: 'Streckenauswahl', sum: 'Rennübersicht', settings: 'Einstellungen' };
 function focusFor(c) {
   const h = S.hp[c.pi | 0];
-  M.fc = { ch: h.ch, sk: h.sk, kt: h.kt, pk: h.pk };
+  M.fc = { ch: h.ch, sk: h.sk, kt: h.kt, pk: h.pk, cs: h.cs | 0 };
 }
 function updatePreview() {
   const c = cur(), el = $('#stage.live');
@@ -259,7 +269,7 @@ function updatePreview() {
   const h = S.hp[c.pi | 0];
   setStage(el);
   if (c.id === 'char') setPreview({ pv: 'char', ch: M.fc.ch, sk: M.fc.sk });
-  else setPreview({ pv: 'kart', kt: M.fc.kt, pk: M.fc.pk, drv: { ch: h.ch, sk: h.sk } });
+  else setPreview({ pv: 'kart', kt: M.fc.kt, pk: M.fc.pk, cs: M.fc.cs, drv: { ch: h.ch, sk: h.sk } });
 }
 function setNav() {
   const f = flow(), c = cur(), back = $('#navBack'), next = $('#navNext');
@@ -271,6 +281,7 @@ function setNav() {
 }
 export function show(anim) {
   const c = cur(), pg = $('#page'), top = $('.mscroll');
+  useSlot(c.id === 'char' || c.id === 'kart' ? c.pi | 0 : 0);
   if (c.id === 'char' || c.id === 'kart') { if (!M.fc || M.fcFor !== c.id + (c.pi | 0)) { focusFor(c); M.fcFor = c.id + (c.pi | 0); } } else M.fcFor = '';
   if (c.id === 'char' || c.id === 'kart') sanitize();
   if (c.id === 'main' || c.id === 'track' || c.id === 'sum') { if (anim !== false) backdrop(); }
@@ -291,7 +302,7 @@ export function renderMenu(reset) {
 
 /* ----- Klicks ----- */
 function act(a, d) {
-  const c = cur();
+  const c = cur(); useSlot(c.id === 'char' || c.id === 'kart' ? c.pi | 0 : 0);
   if (a === 'mode') { if (M.sel === d.m) { go(1); return; } M.sel = d.m; document.querySelectorAll('.mode').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === d.m)); savePrefs(); return; }
   if (a === 'cfg') {
     const v = +d.v;
@@ -319,6 +330,11 @@ function act(a, d) {
   if (a === 'paint') {
     const i = +d.i, h = S.hp[c.pi | 0]; M.fc.pk = i;
     if (kartOk(M.fc.kt) && paintOk(M.fc.kt, i)) { h.kt = M.fc.kt; h.pk = i; syncP1(); }
+    show(false); return;
+  }
+  if (a === 'cos') {
+    const k = +d.i, h = S.hp[c.pi | 0]; M.fc.cs = k;
+    if (cosOk(k)) { h.cs = k; syncP1(); }
     show(false); return;
   }
   if (a === 'track') {

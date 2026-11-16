@@ -165,7 +165,7 @@ export function stepCar(c, dt) {
   if (!c.air) for (const jp of S.world.jumps) {
     const dx = c.x - jp.x, dz = c.z - jp.z;
     if (c.jumpCd <= 0 && dx * dx + dz * dz < 19 * 19) {
-      c.air = true; c.hop = true; c.chute = false; c.vy = 125 + 0.3 * c.s; c.y = 1; c.jumpCd = 1; c.drift = 0; jp.anim = 0.45;
+      c.air = true; c.hop = true; c.chute = false; c.vy = 125 + 0.3 * c.s; c.y = 1; c.jumpCd = 1; c.drift = 0; jp.anim = 0.45; c.jumpN = (c.jumpN | 0) + 1;
       for (let i = 0; i < 5; i++) spawnPuff(jp.x, 4, jp.z, 0xffd23f, 0.4, 14);
       if (c === S.player) vib(25);
     }
